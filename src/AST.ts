@@ -94,6 +94,8 @@ export function parser(tokens: Token[]): ProgramNode {
 
     const triggers: TriggerNode[] = [];
 
+    const selector = selectorToken.value!.trim().replace(/\s+/g, " ");
+
     while (current() && current()!.type !== "RBRACE") {
       triggers.push(parseTrigger());
     }
@@ -102,7 +104,7 @@ export function parser(tokens: Token[]): ProgramNode {
 
     return {
       type: "Rule",
-      selector: selectorToken.value!,
+      selector,
       triggers,
     };
   }
@@ -126,7 +128,7 @@ export function parser(tokens: Token[]): ProgramNode {
 
     return {
       type: "Trigger",
-      name: nameToken.value!,
+      name: nameToken.value!.trim(),
       statements,
     };
   }
@@ -222,7 +224,7 @@ export function parser(tokens: Token[]): ProgramNode {
 
     return {
       type: "Statement",
-      property: propertyToken.value!,
+      property: propertyToken.value!.trim(),
       action,
     };
   }

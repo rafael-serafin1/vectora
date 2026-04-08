@@ -1,11 +1,11 @@
-h1 {
+main > div > h1 {
     DOMContent.onLoad {
         // erro que fazia o delay depois do sinal "=>" não funcionar resolvido!
         // proxima etapa -> operador de aplicação de propriedades "&"
         //text: rise() +- slideOut() => --1000ms => &ease-in-out;
         // aplicar propriedades a interpolações de concatenação não faz muita diferença
         // agora aceita funções como steps() e cubix()
-        text: rise() ++ slideIn() => &ease-in-out;
+        text: (rise() ++ slideIn()) ++ rise() => &ease-in-out;
         color: fadeColor(#f00, #000, 600ms);
     };
 }
