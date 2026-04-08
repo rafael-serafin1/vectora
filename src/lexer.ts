@@ -221,8 +221,8 @@ export function lexer(input: string): Token[] {
     if (char && /[a-zA-Z_.#]/.test(char)) {
       let value = "";
 
-      // permite letras, números, ponto, underscore e #
-      while (input[i] && /[a-zA-Z0-9_.#]/.test(input[i] as string)) {
+      // permite letras, números, ponto, underscore, #, -, >, vírgulas e espaços para selectors CSS
+      while (input[i] && /[a-zA-Z0-9_.#\->,\s]/.test(input[i] as string)) {
         value += input[i];
         i++;
       }

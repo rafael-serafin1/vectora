@@ -35,10 +35,16 @@ type ActionNode = {
   args: (string | number)[];
 };
 
+// nó de grupo de expressões entre parênteses
+ type ActionGroupNode = {
+  type: "Group";
+  expression: ActionExpr;
+};
+
 // nó de sequência de ações
-type ActionSequenceNode = {
+ type ActionSequenceNode = {
   type: "ActionSequence";
-  parts: ActionNode[];
+  parts: ActionExpr[];
   operators: string[];
   finalActions?: ActionNode[] | undefined;  // ação final (depois de "=>")
   delays?: (number | null)[];               // delays entre ações (em ms), null significa sem delay
@@ -47,7 +53,7 @@ type ActionSequenceNode = {
   properties?: string[] | string;                        // propriedades de interpolação
 };
 
-type ActionExpr = ActionNode | ActionSequenceNode | undefined;
+type ActionExpr = ActionNode | ActionSequenceNode | ActionGroupNode;
 
 export function parser(tokens: Token[]): ProgramNode {
   let i = 0;
@@ -88,6 +94,8 @@ export function parser(tokens: Token[]): ProgramNode {
 
     const triggers: TriggerNode[] = [];
 
+    const selector = selectorToken.value!.trim().replace(/\s+/g, " ");
+
     while (current() && current()!.type !== "RBRACE") {
       triggers.push(parseTrigger());
     }
@@ -96,7 +104,7 @@ export function parser(tokens: Token[]): ProgramNode {
 
     return {
       type: "Rule",
-      selector: selectorToken.value!,
+      selector,
       triggers,
     };
   }
@@ -120,7 +128,7 @@ export function parser(tokens: Token[]): ProgramNode {
 
     return {
       type: "Trigger",
-      name: nameToken.value!,
+      name: nameToken.value!.trim(),
       statements,
     };
   }
@@ -133,47 +141,19 @@ export function parser(tokens: Token[]): ProgramNode {
 
     consume("COLON", "Esperado ':' após propriedade");
 
-    // Parse a primeira ação
-    const firstAction = parseAction();
-
-    const parts: ActionNode[] = [firstAction];
-    const operators: string[] = [];
-    const delays: (number | null)[] = [];
-    let propertyNew: string = "";
-    let typeNew: string = "";
-
-    // Enquanto houver operadores (ex: '++'), consome e lê próxima ação
-    while (current() && current()!.type === "OPERATOR") {
-      const op = consume("OPERATOR", "Esperado operador").value!;
-      operators.push(op);
-      
-      // Verifica se há um delay antes da próxima ação
-      let delay: number | null = null;
-      if (current() && current()!.type === "DELAY") {
-        const delayToken = consume("DELAY", "Esperado delay").value!;
-        // Parseia "1000ms" ou "1s" para millisegundos
-        const match = delayToken.match(/^(\d+(?:\.\d+)?)(ms|s)$/);
-        if (match && match[1]) {
-          let value = parseFloat(match[1]);
-          const unit = match[2] || "ms";
-          delay = unit === "s" ? value * 1000 : value;
-        }
-      }
-      delays.push(delay);
-      
-      const nextAction = parseAction();
-      parts.push(nextAction);
-    }
+    const actionExpr = parseExpression();
 
     const finalActions: ActionNode[] = [];
     let finalDelay: number | null = null;
+    let propertyNew: string = "";
+    let typeNew: string = "";
+    const arrowDelays: (number | null)[] = [];
 
     // Verifica se há múltiplos "=>" (manipulação de interpolação)
     while (current() && current()!.type === "ARROW") {
       consume("ARROW", "Esperado '=>'");
-      
-      // Se há delay logo após =>, parseá-lo
-      if (current() && current()!.type === 'DELAY') {
+
+      if (current() && current()!.type === "DELAY") {
         const delayToken = consume("DELAY", "Esperado delay").value!;
         const match = delayToken.match(/^(\d+(?:\.\d+)?)(ms|s)$/);
         if (match && match[1]) {
@@ -181,24 +161,18 @@ export function parser(tokens: Token[]): ProgramNode {
           const unit = match[2] || "ms";
           finalDelay = unit === "s" ? value * 1000 : value;
         }
-        // gastei trinta minutos procurando o erro, e era pq tava faltando ISSO no final
-        // mais que CU
-        delays.push(finalDelay); 
-      } 
+        arrowDelays.push(finalDelay);
+      }
 
-      // Se há uma propriedade (&ease-in-out ou com tipagem de propriedade ex: &transition:ease-in-out)
       if (current() && current()!.type === "PROPERTY-TYPE") {
         typeNew = consume("PROPERTY-TYPE", "Esperado tipo de propriedade").value!;
       }
       if (current() && current()!.type === "PROPERTY") {
         propertyNew = consume("PROPERTY", "Esperado propriedade").value!;
       }
-      // Se há uma ação final (diferente de ; DELAY)
-      else if (current() && current()!.type !== "SEMICOLON" && current()!.type !== "DELAY" && current()!.type !== "PROPERTY")
-      {
+      else if (current() && current()!.type !== "SEMICOLON" && current()!.type !== "DELAY" && current()!.type !== "PROPERTY") {
         finalActions.push(parseAction());
-        
-        // Verifica se há delay APÓS a ação final
+
         if (current() && current()!.type === "DELAY") {
           const delayToken = consume("DELAY", "Esperado delay").value!;
           const match = delayToken.match(/^(\d+(?:\.\d+)?)(ms|s)$/);
@@ -207,35 +181,26 @@ export function parser(tokens: Token[]): ProgramNode {
             const unit = match[2] || "ms";
             finalDelay = unit === "s" ? value * 1000 : value;
           }
-          delays.push(finalDelay);
+          arrowDelays.push(finalDelay);
         }
       }
     }
 
     consume("SEMICOLON", "Esperado ';' no fim da declaração");
 
-    let actionExpr: ActionExpr;
-    if (parts.length > 1) {
-      const sequenceNode: ActionSequenceNode = { 
-        type: "ActionSequence", 
-        parts, 
-        operators
-      };
+    let action: ActionExpr = actionExpr;
 
-      if (delays.length > 0) {
-        sequenceNode.delays = delays;
+    const addArrowMetadata = (sequenceNode: ActionSequenceNode) => {
+      if (arrowDelays.length > 0) {
+        sequenceNode.delays = sequenceNode.delays
+          ? [...sequenceNode.delays, ...arrowDelays]
+          : arrowDelays;
       }
       if (finalActions.length > 0) {
         sequenceNode.finalActions = finalActions;
-        if (finalDelay !== null) {
-          sequenceNode.finalDelayMs = finalDelay;
-        }
-        if (propertyNew !== "") {
-          sequenceNode.properties = propertyNew;
-        }
-        if (typeNew !== "") {
-          sequenceNode.propertiesType = typeNew;
-        }
+      }
+      if (finalDelay !== null) {
+        sequenceNode.finalDelayMs = finalDelay;
       }
       if (propertyNew !== "") {
         sequenceNode.properties = propertyNew;
@@ -243,16 +208,66 @@ export function parser(tokens: Token[]): ProgramNode {
       if (typeNew !== "") {
         sequenceNode.propertiesType = typeNew;
       }
-      actionExpr = sequenceNode;
-    } else {
-      actionExpr = parts[0] as ActionNode;
+    };
+
+    if (actionExpr.type === "ActionSequence") {
+      addArrowMetadata(actionExpr);
+    } else if (finalActions.length > 0 || propertyNew !== "" || typeNew !== "" || finalDelay !== null || arrowDelays.length > 0) {
+      const wrapperSequence: ActionSequenceNode = {
+        type: "ActionSequence",
+        parts: [actionExpr],
+        operators: [],
+      };
+      addArrowMetadata(wrapperSequence);
+      action = wrapperSequence;
     }
 
     return {
       type: "Statement",
-      property: propertyToken.value!,
-      action: actionExpr,
+      property: propertyToken.value!.trim(),
+      action,
     };
+  }
+
+  function parseExpression(): ActionExpr {
+    let expr = parsePrimary();
+
+    while (current() && current()!.type === "OPERATOR") {
+      const operator = consume("OPERATOR", "Esperado operador").value!;
+
+      let delay: number | null = null;
+      if (current() && current()!.type === "DELAY") {
+        const delayToken = consume("DELAY", "Esperado delay").value!;
+        const match = delayToken.match(/^(\d+(?:\.\d+)?)(ms|s)$/);
+        if (match && match[1]) {
+          let value = parseFloat(match[1]);
+          const unit = match[2] || "ms";
+          delay = unit === "s" ? value * 1000 : value;
+        }
+      }
+
+      const rightExpr = parsePrimary();
+
+      expr = {
+        type: "ActionSequence",
+        parts: [expr, rightExpr],
+        operators: [operator],
+        delays: [delay],
+      };
+    }
+
+    return expr;
+  }
+
+  function parsePrimary(): ActionExpr {
+    if (current() && current()!.type === "LPAREN") {
+      consume("LPAREN", "Esperado '('.");
+      const expression = parseExpression();
+      consume("RPAREN", "Esperado ')'");
+      return { type: "Group", expression };
+    }
+
+    return parseAction();
   }
 
   function parseAction(): ActionNode {

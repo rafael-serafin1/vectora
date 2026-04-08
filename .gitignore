@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 *.vsix
+prompt
 
 # Editor directories and files
 .vscode/*

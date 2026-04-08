@@ -1,6 +1,6 @@
 import { triggerEvents } from "./events/triggerEvents.js";
 import { filterAnim } from "./filter/filterAnim.js";
-import { getOperationType, getAnimationMetadata, isAnimationValidForProperty, sumVectors, vectorToCssTransform, TransformVector, CssTransformFinal } from "./filter/animationMetadata.js";
+import { getOperationType, getAnimationMetadata, canConcatenate, isAnimationValidForProperty, sumVectors, combineVectorsWithAngle, vectorToCssTransform, TransformVector, CssTransformFinal } from "./filter/animationMetadata.js";
 import { reverseAnimation } from "./reverser/catalogedAnims.js";
 
 // Tipagem mínima baseada no AST que você já tem
@@ -33,186 +33,283 @@ type ActionNode = {
   args: (string | number)[];
 };
 
+type ActionGroupNode = {
+  type: "Group";
+  expression: ActionExpr;
+};
+
+type ResultActionNode = {
+  type: "ResultAction";
+  vector: TransformVector;
+};
+
 type ActionSequenceNode = {
   type: "ActionSequence";
-  parts: ActionNode[];
+  parts: ActionExpr[];
   operators: string[];
   finalActions?: ActionNode[];
   delays?: (number | null)[];
   finalDelayMs?: number;
-  properties?: (string | null)[];
-  property?: string;
+  properties?: string;
+  propertiesType?: string;
 };
 
-type ActionExpr = ActionNode | ActionSequenceNode;
+type ActionExpr = ActionNode | ActionSequenceNode | ActionGroupNode | ResultActionNode;
 
 // registra o trigger 
 const triggerRegistry: Record<string, (cb: (targets?: HTMLElement[]) => any, elements: NodeListOf<HTMLElement>) => void> = triggerEvents;
 
-// Agrupa animações consecutivas que devem ser somadas
-// Retorna grupos de animações onde cada grupo deve ter seus vetores somados
-function groupAnimationsForSumming(parts: ActionNode[], operators: string[]): ActionNode[][] {
-  if (parts.length === 0) return [];
-
-  const groups: ActionNode[][] = [];
-  const firstPart = parts[0];
-  if (!firstPart) return [];
-  
-  let currentGroup: ActionNode[] = [firstPart];
-
-  for (let idx = 1; idx < parts.length; idx++) {
-    const prevPart = parts[idx - 1];
-    const currentPart = parts[idx];
-    
-    if (!prevPart || !currentPart) continue;
-
-    // operators holds the operator between parts[i-1] and parts[i],
-    // so for parts[idx] we must read operators[idx - 1].
-    const operator = operators[idx - 1] || "++";
-    const operationType = getOperationType(prevPart.name as string, currentPart.name as string, operator);
-
-    if (operationType === "soma") {
-      // Continua no mesmo grupo (soma)
-      currentGroup.push(currentPart);
-    } else {
-      // Nova concatenação, fecha grupo atual
-      groups.push(currentGroup);
-      currentGroup = [currentPart];
-    }
-  }
-
-  // Adiciona o último grupo
-  groups.push(currentGroup);
-  return groups;
+function isActionNode(expr: ActionExpr): expr is ActionNode {
+  return expr.type === "Action";
 }
 
-//////Executa uma sequência de animações
-//SOMA: Os vetores de transformação são combinados matematicamente
-//CONCATENAÇÃO: As animações são executadas sequencialmente com delays opcionais
-async function executeAnimationSequence(element: HTMLElement, parts: ActionNode[], operators: string[], finalActions?: ActionNode[], delays?: (number | null)[], finalDelayMs?: number, property?: string) {
-  const NewProp = property ?? "linear";
-  console.log("[Vectora] Iniciando sequência de animações com", parts.length, "parte(s)");
+function isActionGroupNode(expr: ActionExpr): expr is ActionGroupNode {
+  return expr.type === "Group";
+}
 
-  // Agrupa animações que devem ser somadas
-  const groups = groupAnimationsForSumming(parts, operators);
+function isActionSequenceNode(expr: ActionExpr): expr is ActionSequenceNode {
+  return expr.type === "ActionSequence";
+}
 
-  // Executa cada grupo sequencialmente
-  for (let groupIdx = 0; groupIdx < groups.length; groupIdx++) {
-    const group = groups[groupIdx];
-    if (!group || group.length === 0) continue;
-    
-    // Aplica delay se houver (delay vem antes da ação)
-    if (delays && delays[groupIdx] !== undefined && delays[groupIdx] !== null) {
-      console.log(`[Vectora] Aguardando ${delays[groupIdx]}ms antes de executar grupo ${groupIdx + 1}`);
-      await new Promise(resolve => setTimeout(resolve, delays[groupIdx]!));
+function isResultActionNode(expr: ActionExpr): expr is ResultActionNode {
+  return expr.type === "ResultAction";
+}
+
+function getExpressionMetadata(expr: ActionExpr): ReturnType<typeof getAnimationMetadata> | null {
+  if (isActionNode(expr)) {
+    const name = expr.name.startsWith("~") ? expr.name.slice(1) : expr.name;
+    return getAnimationMetadata(name);
+  }
+
+  if (isActionGroupNode(expr)) {
+    return getExpressionMetadata(expr.expression);
+  }
+
+  if (isActionSequenceNode(expr)) {
+    if (expr.parts.length === 0) return null;
+    if (expr.operators.length === 0) {
+      return getExpressionMetadata(expr.parts[0]!);
     }
-    console.log(`[Vectora] Aplicando propriedade ${NewProp} à interpolação`);
-    
-    if (group.length === 1) {
-      // Grupo com uma única animação: executa normalmente
-      const part = group[0];
-      if (!part) continue;
-      
-      if (part.name.includes('~')) {
-        const result = reverseAnimation(part.name);
-        const argsStr = part.args.join(",");
 
-        if (!result) {
-          throw new Error(`[Vectora] Animação não encontrada: ${part.name}`);
-        }
-
-        await Promise.resolve(result(element, argsStr));
-      } 
-      else {
-        const animResult = filterAnim(part.name as string);
-        const animationFn = animResult.fn;
-        const argsStr = part.args.join(",");
-
-        if (!animationFn) {
-          throw new Error(`[Vectora] Animação não encontrada: ${part.name}`);
-        }
-
-        await Promise.resolve(animationFn(element, argsStr));
+    let currentMeta = getExpressionMetadata(expr.parts[0]!);
+    for (let idx = 0; idx < expr.operators.length; idx++) {
+      const operator = expr.operators[idx];
+      const rightMeta = getExpressionMetadata(expr.parts[idx + 1]!);
+      if (!currentMeta) {
+        currentMeta = rightMeta;
+        continue;
       }
-      
-      console.log(`[Vectora] Executando animação "${part.name}"`);
-    } 
-    else {
-      // Grupo com múltiplas animações: SOMA dos vetores
-      const animNames = group.map(p => p?.name || "?").join(" + ");
-      console.log(`[Vectora] SOMA de ${group.length} animações: ${animNames}`);
+      if (!rightMeta) continue;
 
-      // Coleta metadados e vetores de todas as animações do grupo
-      let resultVector: TransformVector = {};
-      const totalDuration = 600; // duração padrão, deveria extrair de cada animação
+      const operationType = operator === "#"
+        ? "soma"
+        : operator === "+-"
+          ? "concatenacao"
+          : getExpressionOperationType(currentMeta, rightMeta);
 
-      for (const part of group) {
-        if (!part) continue;
-        let animation = part.name;
+      if (operationType === "soma") {
+        currentMeta = {
+          family: currentMeta.family,
+          singularity: "indefinida",
+          vector: combineVectorsWithAngle(currentMeta.vector, rightMeta.vector),
+          property: currentMeta.property || rightMeta.property,
+          subfamily: "diagonal",
+        } as any;
+      } else {
+        currentMeta = rightMeta;
+      }
+    }
+    return currentMeta;
+  }
 
-        // caso tenha o operador '~'
-        if (animation.includes('~')) {
-          const anim = animation.split('~')[1];
-          const meta = getAnimationMetadata(anim as string);
-          
-          if (meta && meta.vector) {
-            console.log(`  [${part.name}] vetor: ${JSON.stringify(meta.vector)}`);
-            resultVector = sumVectors(resultVector, meta.vector);
-          }
-        } 
-        // caso não tenha o operador
-        else {
-          const meta = getAnimationMetadata(part.name as string);
+  return null;
+}
 
-          if (meta && meta.vector) {
-            console.log(`  [${part.name}] vetor: ${JSON.stringify(meta.vector)}`);
-            resultVector = sumVectors(resultVector, meta.vector);
-          }
-        }
+function getExpressionVector(expr: ActionExpr): TransformVector | null {
+  if (isActionNode(expr)) {
+    const name = expr.name.startsWith("~") ? expr.name.slice(1) : expr.name;
+    const meta = getAnimationMetadata(name);
+    return meta?.vector || null;
+  }
+
+  if (isActionGroupNode(expr)) {
+    return getExpressionVector(expr.expression);
+  }
+
+  if (isResultActionNode(expr)) {
+    return expr.vector;
+  }
+
+  if (isActionSequenceNode(expr)) {
+    if (expr.parts.length === 0) return null;
+    let currentVector = getExpressionVector(expr.parts[0]!);
+
+    for (let idx = 0; idx < expr.operators.length; idx++) {
+      const operator = expr.operators[idx];
+      const nextVector = getExpressionVector(expr.parts[idx + 1]!);
+      const leftMeta = currentVector ? { vector: currentVector } as any : null;
+      const rightMeta = nextVector ? { vector: nextVector } as any : null;
+      const operationType = operator === "#"
+        ? "soma"
+        : operator === "+-"
+          ? "concatenacao"
+          : getExpressionOperationType(leftMeta, rightMeta);
+
+      if (operationType === "soma") {
+        currentVector = combineVectorsWithAngle(currentVector ?? {}, nextVector ?? {});
+      } else {
+        currentVector = nextVector;
+      }
+    }
+
+    return currentVector;
+  }
+
+  return null;
+}
+
+function getExpressionOperationType(leftMeta: ReturnType<typeof getAnimationMetadata> | null, rightMeta: ReturnType<typeof getAnimationMetadata> | null): "soma" | "concatenacao" {
+  if (!leftMeta || !rightMeta) {
+    return "concatenacao";
+  }
+
+  if (!canConcatenate(leftMeta.singularity, rightMeta.singularity)) {
+    return "soma";
+  }
+
+  if (leftMeta.family !== rightMeta.family) {
+    return "soma";
+  }
+
+  if (leftMeta.family === "vetorial") {
+    return leftMeta.subfamily !== rightMeta.subfamily ? "soma" : "concatenacao";
+  }
+
+  return "concatenacao";
+}
+
+function createResultAction(left: ActionExpr, right: ActionExpr): ResultActionNode {
+  const leftVector = getExpressionVector(left) || {};
+  const rightVector = getExpressionVector(right) || {};
+  return {
+    type: "ResultAction",
+    vector: combineVectorsWithAngle(leftVector, rightVector),
+  };
+}
+
+function delay(ms: number | null): Promise<void> {
+  if (ms === null || ms === undefined) return Promise.resolve();
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function executeActionExpr(element: HTMLElement, expr: ActionExpr, property: string) {
+  if (isActionNode(expr)) {
+    if (expr.name.includes("~")) {
+      const result = reverseAnimation(expr.name);
+      const argsStr = expr.args.join(",");
+
+      if (!result) {
+        throw new Error(`[Vectora] Animação não encontrada: ${expr.name}`);
       }
 
-      // aplica o vetor resultante como transformação CSS
-      const cssTransform = vectorToCssTransform(resultVector);
-      console.log(`  → Vetor resultante: ${cssTransform}`);
+      await Promise.resolve(result(element, argsStr));
+      return;
+    }
 
-      // Executa a animação com transform resultante
-      await new Promise<void>(resolve => {
-        // Passo 1: Aplica posição INICIAL (onde começa) sem transição
-        element.style.transition = 'none';
-        element.style.transform = cssTransform;
-        
-        // Força reflow para garantir que a transição seja aplicada
-        void element.offsetWidth;
-        
-        // Passo 2: Ativa transição e anima para posição FINAL
-        element.style.transition = `transform ${totalDuration}ms ${NewProp}`;
-        element.style.transform = 'none';
+    const animResult = filterAnim(expr.name);
+    const animationFn = animResult.fn;
+    const argsStr = expr.args.join(",");
 
-        const onEnd = () => {
-          element.removeEventListener('transitionend', onEnd);
-          resolve();
-        };
+    if (!animationFn) {
+      throw new Error(`[Vectora] Animação não encontrada: ${expr.name}`);
+    }
 
-        element.addEventListener('transitionend', onEnd);
+    await Promise.resolve(animationFn(element, argsStr));
+    return;
+  }
 
-        // Fallback timeout
-        setTimeout(() => {
-          element.removeEventListener('transitionend', onEnd);
-          resolve();
-        }, totalDuration + 50);
-      });
+  if (isResultActionNode(expr)) {
+    const cssTransform = vectorToCssTransform(expr.vector);
+    element.style.transition = "none";
+    element.style.transform = cssTransform;
+    void element.offsetWidth;
+    element.style.transition = `transform 600ms ${property ?? "linear"}`;
+    element.style.transform = "none";
+
+    await new Promise<void>(resolve => {
+      const onEnd = () => {
+        element.removeEventListener("transitionend", onEnd);
+        resolve();
+      };
+
+      element.addEventListener("transitionend", onEnd);
+      setTimeout(() => {
+        element.removeEventListener("transitionend", onEnd);
+        resolve();
+      }, 650);
+    });
+    return;
+  }
+
+  if (isActionGroupNode(expr)) {
+    await executeActionExpr(element, expr.expression, property);
+    return;
+  }
+
+  if (isActionSequenceNode(expr)) {
+    await executeSequenceNode(element, expr, property);
+    return;
+  }
+}
+
+async function executeSequenceNode(element: HTMLElement, seq: ActionSequenceNode, property: string) {
+  if (seq.parts.length === 0) return;
+  if (seq.operators.length === 0) {
+    await executeActionExpr(element, seq.parts[0]!, property);
+    return;
+  }
+
+  let currentExpr = seq.parts[0]!;
+
+  for (let idx = 0; idx < seq.operators.length; idx++) {
+    const operator = seq.operators[idx];
+    const nextExpr = seq.parts[idx + 1]!;
+    const delayMs = seq.delays?.[idx] ?? null;
+
+    if (delayMs !== null) {
+      console.log(`[Vectora] Aguardando ${delayMs}ms antes do próximo segmento`);
+      await delay(delayMs);
+    }
+
+    const leftMeta = getExpressionMetadata(currentExpr);
+    const rightMeta = getExpressionMetadata(nextExpr);
+    const opType = operator === "#"
+      ? "soma"
+      : operator === "+-"
+        ? "concatenacao"
+        : getExpressionOperationType(leftMeta, rightMeta);
+
+    if (opType === "concatenacao") {
+      await executeActionExpr(element, currentExpr, property);
+      currentExpr = nextExpr;
+    } else {
+      currentExpr = createResultAction(currentExpr, nextExpr);
     }
   }
 
-  // Aplica delay antes das ações finais se houver
-  if (finalDelayMs !== undefined && finalDelayMs !== null && finalDelayMs > 0) {
-    console.log(`[Vectora] Aguardando ${finalDelayMs}ms antes de executar ações finais`);
-    await new Promise(resolve => setTimeout(resolve, finalDelayMs));
+  await executeActionExpr(element, currentExpr, property);
+}
+
+async function executeStatementExpression(element: HTMLElement, actionExpr: ActionExpr, easing: string) {
+  await executeActionExpr(element, actionExpr, easing);
+
+  if (isActionSequenceNode(actionExpr) && actionExpr.finalDelayMs) {
+    console.log(`[Vectora] Aguardando ${actionExpr.finalDelayMs}ms antes das ações finais`);
+    await delay(actionExpr.finalDelayMs);
   }
 
-  // Executa as ações finais após a sequência terminar (manipulação de interpolação)
-  if (finalActions && finalActions.length > 0) {
-    for (const finalAction of finalActions) {
+  if (isActionSequenceNode(actionExpr) && actionExpr.finalActions) {
+    for (const finalAction of actionExpr.finalActions) {
       console.log("[Vectora] Executando ação final (manipulação de interpolação):", finalAction.name);
       const animResult = filterAnim(finalAction.name as string);
       const animationFn = animResult.fn;
@@ -274,76 +371,38 @@ export function interpret(ast: ProgramNode) {
             const actionExpr = statement.action;
             const property = statement.property;
 
-            /// caso seja uma animação comum
-            if ((actionExpr as any).type === "Action") {
-              const action = actionExpr as any as { type: string; name: string; args: (string | number)[] };
-              
-              // Valida se a animação é compatível com a propriedade
+            const collectActionNodes = (expr: ActionExpr): ActionNode[] => {
+              if (isActionNode(expr)) {
+                return [expr];
+              }
+              if (isActionGroupNode(expr)) {
+                return collectActionNodes(expr.expression);
+              }
+              if (isActionSequenceNode(expr)) {
+                return expr.parts.flatMap(part => collectActionNodes(part));
+              }
+              return [];
+            };
+
+            const validateActionNode = (action: ActionNode) => {
               const animName = action.name.startsWith("~") ? action.name.slice(1) : action.name;
               if (!isAnimationValidForProperty(animName, property)) {
                 throw new Error(`[Vectora] Erro: A propriedade '${property}' não pode receber a animação '${animName}'. Animações compatíveis com '${property}' devem ser específicas dessa propriedade.`);
               }
+            };
 
-              if (action.name.startsWith("~")) {
-                statementPromises.push((async () => {
-                  const animResult = reverseAnimation(action.name);
-                  const argsStr = action.args.join(",");
-
-                  console.log("[Vectora] Executando inverso de animação:", action.name, "\nCom argumentos:", argsStr);
-
-                  if (!animResult) throw new Error(`[Vectora] Animação não encontrada para: ${action.name}`);
-
-                  return await Promise.resolve(animResult(element, argsStr));
-                })());
-              } else {
-                statementPromises.push((async () => {
-                  const animResult = filterAnim(action.name as string);
-                  const animationFn = animResult.fn;
-                  const argsStr = action.args.join(",");
-  
-                  console.log("[Vectora] Executando animação:", action.name, "\nCom argumentos:", argsStr);
-  
-                  if (!animationFn) throw new Error(`[Vectora] Animação não encontrada: ${action.name}`);
-  
-                  // possibilidade de retorno de uma Promise; normalizamos com Promise.resolve
-                  return await Promise.resolve(animationFn(element, argsStr));
-                })());
-              }
-            } 
-            /// caso seja uma sequência de animações (soma/concatenação)
-            else if ((actionExpr as any).type === "ActionSequence") {                         
-              const seq = actionExpr as any as { 
-                type: string; 
-                parts: any[]; 
-                operators: string[]; 
-                finalActions?: any[];
-                delays?: (number | null)[];
-                finalDelayMs?: number;
-                properties?: string;
-                propertiesType?: string;
-              };
-              
-              // Valida todas as animações na sequência
-              for (const part of seq.parts) {
-                const animName = part.name.startsWith("~") ? part.name.slice(1) : part.name;
-                if (!isAnimationValidForProperty(animName, property)) {
-                  throw new Error(`[Vectora] Erro: A propriedade '${property}' não pode receber a animação '${animName}'. Animações compatíveis com '${property}' devem ser específicas dessa propriedade.`);
-                }
-              }
-              
-              // Valida as ações finais também
-              if (seq.finalActions) {
-                for (const finalAction of seq.finalActions) {
-                  const animName = finalAction.name.startsWith("~") ? finalAction.name.slice(1) : finalAction.name;
-                  if (!isAnimationValidForProperty(animName, property)) {
-                    throw new Error(`[Vectora] Erro: A propriedade '${property}' não pode receber a animação '${animName}' (ação final). Animações compatíveis com '${property}' devem ser específicas dessa propriedade.`);
-                  }
-                }
-              }
-
-              // Cada sequência deve rodar de forma sequencial, mas a sequência inteira pode rodar em paralelo com outras statements
-              statementPromises.push(executeAnimationSequence(element, seq.parts, seq.operators, seq.finalActions, seq.delays, seq.finalDelayMs, seq.properties));
+            for (const actionNode of collectActionNodes(actionExpr)) {
+              validateActionNode(actionNode);
             }
+
+            if (isActionSequenceNode(actionExpr) && actionExpr.finalActions) {
+              for (const finalAction of actionExpr.finalActions) {
+                validateActionNode(finalAction);
+              }
+            }
+
+            const easing = isActionSequenceNode(actionExpr) ? actionExpr.properties ?? "linear" : "linear";
+            statementPromises.push(executeStatementExpression(element, actionExpr, easing));
           }
 
           // Aguarda todas as statements (cada uma já trata sequências internamente)

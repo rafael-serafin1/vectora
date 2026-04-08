@@ -330,6 +330,49 @@ export function sumVectors(v1: TransformVector, v2: TransformVector): TransformV
   return result;
 }
 
+function normalizeAngle(angle: number): number {
+  const full = Math.PI * 2;
+  let normalized = angle % full;
+  if (normalized < 0) normalized += full;
+  return normalized;
+}
+
+function meanAngle(a: number, b: number): number {
+  const x = Math.cos(a) + Math.cos(b);
+  const y = Math.sin(a) + Math.sin(b);
+  return Math.atan2(y, x);
+}
+
+export function combineVectorsWithAngle(v1: TransformVector, v2: TransformVector): TransformVector {
+  const hasTranslation = (v: TransformVector) => v.translateX !== undefined || v.translateY !== undefined;
+
+  if (!hasTranslation(v1) || !hasTranslation(v2)) {
+    return sumVectors(v1, v2);
+  }
+
+  const x1 = v1.translateX ?? 0;
+  const y1 = v1.translateY ?? 0;
+  const x2 = v2.translateX ?? 0;
+  const y2 = v2.translateY ?? 0;
+
+  const angle1 = normalizeAngle(Math.atan2(y1, x1));
+  const angle2 = normalizeAngle(Math.atan2(y2, x2));
+  const averageAngle = meanAngle(angle1, angle2);
+
+  const mag1 = Math.sqrt(x1 * x1 + y1 * y1);
+  const mag2 = Math.sqrt(x2 * x2 + y2 * y2);
+  const magnitude = Math.max(mag1, mag2);
+
+  const combinedX = magnitude * Math.cos(averageAngle);
+  const combinedY = magnitude * Math.sin(averageAngle);
+
+  const result = sumVectors(v1, v2);
+  result.translateX = Number(combinedX.toFixed(4));
+  result.translateY = Number(combinedY.toFixed(4));
+
+  return result;
+}
+
 
 /// Converte um vetor de transformação em string CSS transform
 export function vectorToCssTransform(vector: TransformVector): string {

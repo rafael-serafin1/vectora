@@ -1,0 +1,17 @@
+# arquivos #
+* text=auto
+
+# arquivos de imagem ##
+*.jpg binary
+*.png binary
+*.gif binary
+*.pdf binary
+
+# arquivos de código ##
+*.js text
+*.css text
+*.html text
+*.py text
+*.java text
+*.c text
+*.ts text
