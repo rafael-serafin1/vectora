@@ -191,11 +191,6 @@ export function parser(tokens: Token[]): ProgramNode {
     let action: ActionExpr = actionExpr;
 
     const addArrowMetadata = (sequenceNode: ActionSequenceNode) => {
-      if (arrowDelays.length > 0) {
-        sequenceNode.delays = sequenceNode.delays
-          ? [...sequenceNode.delays, ...arrowDelays]
-          : arrowDelays;
-      }
       if (finalActions.length > 0) {
         sequenceNode.finalActions = finalActions;
       }
@@ -207,6 +202,29 @@ export function parser(tokens: Token[]): ProgramNode {
       }
       if (typeNew !== "") {
         sequenceNode.propertiesType = typeNew;
+      }
+
+      if (arrowDelays.length > 0 && finalActions.length === 0) {
+        const delayValue = arrowDelays[0];
+        if (delayValue !== null && delayValue !== undefined) {
+          if (sequenceNode.operators.length > 0) {
+            const operatorCount = sequenceNode.operators.length;
+            if (!sequenceNode.delays) {
+              sequenceNode.delays = Array(operatorCount).fill(null);
+            }
+
+            if (sequenceNode.delays.length !== operatorCount) {
+              sequenceNode.delays = sequenceNode.delays.slice(0, operatorCount);
+              while (sequenceNode.delays.length < operatorCount) {
+                sequenceNode.delays.push(null);
+              }
+            }
+
+            sequenceNode.delays[operatorCount - 1] = delayValue;
+          } else {
+            sequenceNode.finalDelayMs = delayValue;
+          }
+        }
       }
     };
 
