@@ -1,0 +1,15 @@
+@vectora {
+    import {            // trigger especial do evento assyncrono '@vectora'
+        whensevent, // acesse "../../import/library/whensevent/REMINDER.md" para mais informações
+        playerlayer // acesse "../../import/library/playerlayer/REMINDER.md" para mais informações
+    };
+}
+
+h1 {
+    when.Hover {                // trigger acessível apenas através da biblioteca whensevent
+        text: pop() --300ms;
+        brightness: halo(4, #b8c9d4, 600ms);
+        sound: play('./sound/hover-sound.mp3', 1);  // propriedade de som, usando a biblioteca playerlayer
+        // função que toca um som específico, o segundo argumento é o volume (0 a 1, levando em conta números decimais)
+    };
+}

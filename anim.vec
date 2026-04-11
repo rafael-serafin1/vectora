@@ -1,4 +1,11 @@
 // Leia DEEPKNOWLAGE.md para melhor detalhamento
+@vectora {
+    import {
+        whensevent,
+        playerlayer
+    };
+}
+
 main > div > h1,
 main > div > h2 {
     DOMContent.onLoad {
@@ -8,9 +15,6 @@ main > div > h2 {
         // e o angulo se manteve em 45° graus, o que não é o resultado esperado descrito
         text: (rise() ++ slideIn()) => &ease-in-out => slideOut() --1s;
         color: fadeColor(#f00, #000, 600ms);
-    };
-    onSing.click {
-        text: fadeIn(600ms);
     };
 }
 

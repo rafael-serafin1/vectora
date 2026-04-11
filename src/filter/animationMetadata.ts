@@ -1,7 +1,9 @@
+import { isLibraryLoaded } from "../events/especificTriggers.js";
+
 export type AnimationFamily = "vetorial" | "escalar" | "adimensional";
 export type VectorSubfamily = "horizontal" | "vertical" | "diagonal" | null;
 export type AnimationSingularity = "entrada" | "saída" | "indefinida";
-export type AnimationProperty = "text" | "color" | "background.color" | "transform" | "radius" | "gap" | "weight" | "brightness" | "shadow" | "text.shadow";
+export type AnimationProperty = "text" | "color" | "background.color" | "transform" | "radius" | "gap" | "weight" | "brightness" | "shadow" | "text.shadow" | "sound";
 
 /// 
 /// Vetor de transformação de uma animação (componentes de movimento)
@@ -267,12 +269,43 @@ export const animationMetadata: Record<string, AnimationMetadata> = {
     vector: {},
     property: "shadow"
   },
+  play: {
+    family: "adimensional",
+    singularity: "indefinida",
+    vector: {},
+    property: "sound"
+  },
+  loop: {
+    family: "adimensional",
+    singularity: "indefinida",
+    vector: {},
+    property: "sound"
+  },
+  pause: {
+    family: "adimensional",
+    singularity: "indefinida",
+    vector: {},
+    property: "sound"
+  },
+  stop: {
+    family: "adimensional",
+    singularity: "indefinida",
+    vector: {},
+    property: "sound"
+  },
 };
 
 
 /// obtém os metadados de uma animação
 export function getAnimationMetadata(animName: string): AnimationMetadata | null {
-  return animationMetadata[animName] || null;
+  const metadata = animationMetadata[animName] || null;
+  if (!metadata) {
+    return null;
+  }
+  if (metadata.property === "sound" && !isLibraryLoaded("playerlayer")) {
+    return null;
+  }
+  return metadata;
 }
 
 /// Valida se uma animação é compatível com a propriedade CSS indicada

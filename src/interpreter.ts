@@ -1,4 +1,5 @@
 import { triggerEvents } from "./events/triggerEvents.js";
+import { especificTriggers, registerLibraries } from "./events/especificTriggers.js";
 import { filterAnim } from "./filter/filterAnim.js";
 import { AnimationFamily, VectorSubfamily, getOperationType, getAnimationMetadata, canConcatenate, isAnimationValidForProperty, sumVectors, combineVectorsWithAngle, vectorToCssTransform, TransformVector, CssTransformFinal } from "./filter/animationMetadata.js";
 import { reverseAnimation } from "./reverser/catalogedAnims.js";
@@ -19,6 +20,7 @@ type TriggerNode = {
   type: "Trigger";
   name: string;
   statements: StatementNode[];
+  imports?: string[];
 };
 
 type StatementNode = {
@@ -57,7 +59,10 @@ type ActionSequenceNode = {
 type ActionExpr = ActionNode | ActionSequenceNode | ActionGroupNode | ResultActionNode;
 
 // registra o trigger 
-const triggerRegistry: Record<string, (cb: (targets?: HTMLElement[]) => any, elements: NodeListOf<HTMLElement>) => void> = triggerEvents;
+const triggerRegistry: Record<string, (cb: (targets?: HTMLElement[]) => any, elements: NodeListOf<HTMLElement>) => void> = {
+  ...triggerEvents,
+  ...especificTriggers,
+};
 
 const tempInterpolationPrefix = "__vectora_temp__";
 const tempInterpolationRegistry = new Map<string, {
@@ -425,15 +430,19 @@ export function interpret(ast: ProgramNode) {
   for (const rule of ast.rules) {
     console.log("[Vectora] Processando regra com seletor:", rule.selector);
 
-    // resolução do seletor CSS (tags, classes e ids)
-    const elements = document.querySelectorAll<HTMLElement>(rule.selector);
+    const isAsyncSelector = rule.selector.trim() === "@vectora" || rule.selector.trim() === "@cmd";
+    const elements = isAsyncSelector
+      ? document.querySelectorAll<HTMLElement>("html")
+      : document.querySelectorAll<HTMLElement>(rule.selector);
 
-    if (elements.length === 0) {
+    if (!isAsyncSelector && elements.length === 0) {
       console.warn(`[Vectora] Nenhum elemento encontrado para: ${rule.selector}`);
       continue;
     }
     
-    console.log(`[Vectora] ${elements.length} elemento(s) encontrado(s) para "${rule.selector}"`);
+    if (!isAsyncSelector) {
+      console.log(`[Vectora] ${elements.length} elemento(s) encontrado(s) para "${rule.selector}"`);
+    }
 
     // cada regra pode ter vários triggers
     for (const trigger of rule.triggers) {
@@ -447,9 +456,10 @@ export function interpret(ast: ProgramNode) {
         throw new Error(`[Vectora] Trigger não suportado: ${trigger.name}`);
       }
 
-      // registra o trigger; o callback pode receber um array opcional de elementos-alvo
-      triggerFn(async (targets?: HTMLElement[]) => {
+      const callback = async (targets?: HTMLElement[]) => {
         console.log("[Vectora] Trigger disparado:", trigger.name);
+
+        if (trigger.imports && trigger.imports.length > 0)registerLibraries(trigger.imports);
 
         // elementos do trigger 
         const runElements = targets && targets.length ? targets : Array.from(elements);
@@ -464,15 +474,9 @@ export function interpret(ast: ProgramNode) {
             const property = statement.property;
 
             const collectActionNodes = (expr: ActionExpr): ActionNode[] => {
-              if (isActionNode(expr)) {
-                return [expr];
-              }
-              if (isActionGroupNode(expr)) {
-                return collectActionNodes(expr.expression);
-              }
-              if (isActionSequenceNode(expr)) {
-                return expr.parts.flatMap(part => collectActionNodes(part));
-              }
+              if (isActionNode(expr)) return [expr];
+              if (isActionGroupNode(expr)) return collectActionNodes(expr.expression);
+              if (isActionSequenceNode(expr)) return expr.parts.flatMap(part => collectActionNodes(part));
               return [];
             };
 
@@ -503,7 +507,9 @@ export function interpret(ast: ProgramNode) {
           // Aguarda todas as statements (cada uma já trata sequências internamente)
           await Promise.all(statementPromises);
         }
-      }, elements);
+      };
+
+      triggerFn(callback, elements);
     }
   }
 }

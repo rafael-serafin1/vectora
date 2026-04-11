@@ -1,6 +1,7 @@
 // Tipos de tokens possíveis na sua DSL
 export type TokenType =
   | "IDENT"
+  | "STRING"
   | "NUMBER"
   | "UNIT"
   | "LBRACE"
@@ -150,7 +151,28 @@ export function lexer(input: string): Token[] {
       }
     }
 
-    
+    // string literal simples ou dupla
+    if (char === "'" || char === '"') {
+      const quote = char;
+      let value = "";
+      i++;
+      while (i < input.length && input[i] !== quote) {
+        if (input[i] === "\\" && i + 1 < input.length) {
+          value += input[i + 1];
+          i += 2;
+          continue;
+        }
+        value += input[i];
+        i++;
+      }
+      if (input[i] !== quote) {
+        throw new Error("String não terminada");
+      }
+      i++;
+      tokens.push({ type: "STRING", value });
+      continue;
+    }
+
     // operador de reversão '~'
     if (char === "~") {
       tokens.push({ type: "OPERATOR", value: "~"});
@@ -218,11 +240,22 @@ export function lexer(input: string): Token[] {
       continue;
     }
 
-    if (char && /[a-zA-Z_.#]/.test(char)) {
+    if (char === "@") {
+      let value = "@";
+      i++;
+      while (input[i] && /[a-zA-Z0-9_.#@\-\,>\s]/.test(input[i] as string)) {
+        value += input[i];
+        i++;
+      }
+      tokens.push({ type: "IDENT", value });
+      continue;
+    }
+
+    if (char && /[a-zA-Z_.#>]/.test(char)) {
       let value = "";
 
-      // permite letras, números, ponto, underscore, #, -, >, vírgulas e espaços para selectors CSS
-      while (input[i] && /[a-zA-Z0-9_.#\->,\s]/.test(input[i] as string)) {
+      // permite letras, números, ponto, underscore, #, > e -
+      while (input[i] && /[a-zA-Z0-9_.#>\-]/.test(input[i] as string)) {
         value += input[i];
         i++;
       }
