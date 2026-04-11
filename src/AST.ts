@@ -19,6 +19,7 @@ interface TriggerNode {
   type: "Trigger";
   name: string;
   statements: StatementNode[];
+  imports?: string[];
 }
 
 // nó de declaração
@@ -85,16 +86,11 @@ export function parser(tokens: Token[]): ProgramNode {
     };
   }
   function parseRule(): RuleNode {
-    const selectorToken = consume(
-      "IDENT",
-      "Esperado seletor (tag, .class, #id)"
-    );
+    const selector = parseSelector();
 
     consume("LBRACE", "Esperado '{' após seletor");
 
     const triggers: TriggerNode[] = [];
-
-    const selector = selectorToken.value!.trim().replace(/\s+/g, " ");
 
     while (current() && current()!.type !== "RBRACE") {
       triggers.push(parseTrigger());
@@ -109,6 +105,28 @@ export function parser(tokens: Token[]): ProgramNode {
     };
   }
 
+  function parseSelector(): string {
+    let selector = "";
+
+    while (current() && current()!.type !== "LBRACE") {
+      const token = current()!;
+      if (token.type === "COMMA") {
+        selector += ",";
+        consume("COMMA", "Esperado ',' ou '{' após seletor");
+      } else if (token.type === "IDENT") {
+        if (selector && !selector.endsWith(",") && !selector.endsWith(" ")) {
+          selector += " ";
+        }
+        selector += token.value?.trim() ?? "";
+        consume("IDENT", "Esperado seletor (tag, .class, #id)");
+      } else {
+        throw new Error("Esperado seletor antes de '{'");
+      }
+    }
+
+    return selector.trim().replace(/\s+/g, " ");
+  }
+
   function parseTrigger(): TriggerNode {
     const nameToken = consume(
       "IDENT",
@@ -118,9 +136,23 @@ export function parser(tokens: Token[]): ProgramNode {
     consume("LBRACE", "Esperado '{' após trigger");
 
     const statements: StatementNode[] = [];
+    const imports: string[] = [];
+    const triggerName = nameToken.value!.trim();
 
-    while (current() && current()!.type !== "RBRACE") {
-      statements.push(parseStatement());
+    if (triggerName === "import") {
+      while (current() && current()!.type !== "RBRACE") {
+        if (current()!.type === "IDENT") {
+          imports.push(consume("IDENT", "Esperado nome da biblioteca").value!.trim());
+        } else if (current()!.type === "COMMA") {
+          consume("COMMA", "Esperado ',' entre bibliotecas");
+        } else {
+          throw new Error("Esperado nome da biblioteca ou ',' no import");
+        }
+      }
+    } else {
+      while (current() && current()!.type !== "RBRACE") {
+        statements.push(parseStatement());
+      }
     }
 
     consume("RBRACE", "Esperado '}' no fim do trigger");
@@ -128,8 +160,9 @@ export function parser(tokens: Token[]): ProgramNode {
 
     return {
       type: "Trigger",
-      name: nameToken.value!.trim(),
+      name: triggerName,
       statements,
+      ...(imports.length > 0 ? { imports } : {}),
     };
   }
 
@@ -339,6 +372,8 @@ export function parser(tokens: Token[]): ProgramNode {
         } else {
           args.push(value);
         }
+      } else if (argToken.type === "STRING") {
+        args.push(consume("STRING", "Esperado string").value!);
       } else if (argToken.type === "IDENT") {
         args.push(consume("IDENT", "Esperado identificador").value!);
       }
@@ -359,6 +394,8 @@ export function parser(tokens: Token[]): ProgramNode {
           } else {
             args.push(value);
           }
+        } else if (argToken.type === "STRING") {
+          args.push(consume("STRING", "Esperado string").value!);
         } else if (argToken.type === "IDENT") {
           args.push(consume("IDENT", "Esperado identificador").value!);
         }

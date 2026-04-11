@@ -5,6 +5,7 @@ import { gapAnimations } from "../catalog/gap/gapAnimations.js";
 import { radiusAnimations } from "../catalog/radius/radiusAnimations.js";
 import { shadowAnimations } from "../catalog/shadow/shadowAnimations.js";
 import { backgroundColor } from "../catalog/background/color/backgroundColor.js";
+import { soundAnimations } from "../catalog/sound/soundAnimations.js";
 import { getAnimationMetadata, AnimationMetadata } from "./animationMetadata.js";
 import { brightness } from "../catalog/brightness/brightnessAnimations.js";
 
@@ -24,6 +25,7 @@ function filterAnimObject(animName: string) {
   if (animName in brightness) return brightness as any;
   if (animName in shadowAnimations) return shadowAnimations as any;
   if (animName in backgroundColor) return backgroundColor as any;
+  if (animName in soundAnimations) return soundAnimations as any;
   return textAnimations as any;
 }
 

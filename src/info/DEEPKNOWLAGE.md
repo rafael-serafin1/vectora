@@ -88,13 +88,6 @@
     
     - heavy(escala, duração) ---> divide o peso da fonte pela escala em porcentagem.
 
-- [ ] sound ==
-    - play(path) ---> toca o som em loop.
-
-    - pause(duração) ---> pausa o som por um certo período de tempo.
-
-    - stop(sem parâmetro) ---> para de tocar o som.
-
 - [x] brightness ==
     - halo(intensidade, cor, duração) ---> cria uma luz envolta do texto.
 
@@ -377,17 +370,18 @@ Exemplo de uso do cmd:
 
     // '??' representa a palavra-chave condicional IF
     ?? retorno == true:
-    -   terminal.print("A animação executou {$} vezes.", contagem);
-        // As '-' são importantes para representar as linhas de comando dentro do statement.
+        terminal.print("A animação executou {$} vezes.", contagem);
 
     // '!?' representa o a palavra-chave condicional ELSE IF (ELSIF em outras linguagens)
     !? retorno == true && contagem == 10:
-    -   terminal.print("A animação executou 10 vezes."); 
+        terminal.print("A animação executou 10 vezes."); 
 
     // '!!' representa o a palavra-chave condicional ELSE
-    !! :
-    -   terminal.write("Animação executada, contador não retornou TRUE, dados a seguir.");
-    -   terminal.print("id: {$}\n retorno: {$}\n contagem: {$}\n", id, retorno, contagem);
+    // quando tem mais de um comando dentro de um statement, '{}' são necessárias
+    !! {
+        terminal.write("Animação executada, contador não retornou TRUE, dados a seguir.");
+        terminal.print("id: {$}\n retorno: {$}\n contagem: {$}\n", id, retorno, contagem);
+    }
 
         // write sempre escreve os valores em strings.
         // print escreve os valores de variáveis utilizando o {$} dentro das aspas.

@@ -8,17 +8,17 @@
 
 ## New events:
 
-- [ ] when.Hover ==
+- [x] when.Hover ==
     Ao passar o mouse por cima do elemento.
 
-- [ ] when.Target ==
+- [x] when.Target ==
     Ao ser transformado em alvo por uma âncora ou link.
 
-- [ ] when.CheckBox ==
+- [x] when.CheckBox ==
     Ao ser checado, uma animação ocorre com um elemento input do tipo checkbox.
 
-- [ ] when.Checked ==
+- [x] when.Checked ==
     Um link ja checado uma vez, realizará uma animação.
 
-- [ ] when.Focused ==
+- [x] when.Focused ==
     Quando o elemento é focado, realiza a animação.
