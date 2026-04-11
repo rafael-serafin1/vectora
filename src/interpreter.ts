@@ -1,6 +1,6 @@
 import { triggerEvents } from "./events/triggerEvents.js";
 import { filterAnim } from "./filter/filterAnim.js";
-import { getOperationType, getAnimationMetadata, canConcatenate, isAnimationValidForProperty, sumVectors, combineVectorsWithAngle, vectorToCssTransform, TransformVector, CssTransformFinal } from "./filter/animationMetadata.js";
+import { AnimationFamily, VectorSubfamily, getOperationType, getAnimationMetadata, canConcatenate, isAnimationValidForProperty, sumVectors, combineVectorsWithAngle, vectorToCssTransform, TransformVector, CssTransformFinal } from "./filter/animationMetadata.js";
 import { reverseAnimation } from "./reverser/catalogedAnims.js";
 
 // Tipagem mínima baseada no AST que você já tem
@@ -59,6 +59,35 @@ type ActionExpr = ActionNode | ActionSequenceNode | ActionGroupNode | ResultActi
 // registra o trigger 
 const triggerRegistry: Record<string, (cb: (targets?: HTMLElement[]) => any, elements: NodeListOf<HTMLElement>) => void> = triggerEvents;
 
+const tempInterpolationPrefix = "__vectora_temp__";
+const tempInterpolationRegistry = new Map<string, {
+  vector: TransformVector;
+  property: string;
+  family: AnimationFamily;
+  subfamily: VectorSubfamily | undefined;
+}>();
+let tempInterpolationCounter = 0;
+
+function registerTempInterpolation(vector: TransformVector, property: string, family: AnimationFamily, subfamily?: VectorSubfamily): string {
+  const name = `${tempInterpolationPrefix}${tempInterpolationCounter++}`;
+  tempInterpolationRegistry.set(name, { vector, property, family, subfamily });
+  return name;
+}
+
+function getTempInterpolation(name: string) {
+  return tempInterpolationRegistry.get(name) ?? null;
+}
+
+function unregisterTempInterpolations(names: string[]) {
+  for (const name of names) {
+    tempInterpolationRegistry.delete(name);
+  }
+}
+
+function isTempInterpolationName(name: string) {
+  return name.startsWith(tempInterpolationPrefix);
+}
+
 function isActionNode(expr: ActionExpr): expr is ActionNode {
   return expr.type === "Action";
 }
@@ -78,11 +107,39 @@ function isResultActionNode(expr: ActionExpr): expr is ResultActionNode {
 function getExpressionMetadata(expr: ActionExpr): ReturnType<typeof getAnimationMetadata> | null {
   if (isActionNode(expr)) {
     const name = expr.name.startsWith("~") ? expr.name.slice(1) : expr.name;
-    return getAnimationMetadata(name);
+    const metadata = getAnimationMetadata(name);
+    if (metadata) return metadata;
+
+    const temp = getTempInterpolation(name);
+    if (temp) {
+      return {
+        family: temp.family,
+        subfamily: temp.subfamily,
+        singularity: "indefinida",
+        vector: temp.vector,
+        property: temp.property,
+      } as any;
+    }
+
+    return null;
   }
 
   if (isActionGroupNode(expr)) {
     return getExpressionMetadata(expr.expression);
+  }
+
+  if (isResultActionNode(expr)) {
+    const vector = expr.vector;
+    const hasTranslateX = vector.translateX !== undefined;
+    const hasTranslateY = vector.translateY !== undefined;
+
+    return {
+      family: hasTranslateX || hasTranslateY ? "vetorial" : "escalar",
+      subfamily: hasTranslateX && hasTranslateY ? "diagonal" : hasTranslateX ? "horizontal" : hasTranslateY ? "vertical" : undefined,
+      singularity: "indefinida",
+      vector,
+      property: "text",
+    } as any;
   }
 
   if (isActionSequenceNode(expr)) {
@@ -129,7 +186,10 @@ function getExpressionVector(expr: ActionExpr): TransformVector | null {
   if (isActionNode(expr)) {
     const name = expr.name.startsWith("~") ? expr.name.slice(1) : expr.name;
     const meta = getAnimationMetadata(name);
-    return meta?.vector || null;
+    if (meta) return meta.vector || null;
+
+    const temp = getTempInterpolation(name);
+    return temp?.vector || null;
   }
 
   if (isActionGroupNode(expr)) {
@@ -188,12 +248,34 @@ function getExpressionOperationType(leftMeta: ReturnType<typeof getAnimationMeta
   return "concatenacao";
 }
 
-function createResultAction(left: ActionExpr, right: ActionExpr): ResultActionNode {
+function createResultAction(left: ActionExpr, right: ActionExpr, property: string): ActionNode {
   const leftVector = getExpressionVector(left) || {};
   const rightVector = getExpressionVector(right) || {};
+  const combinedVector = combineVectorsWithAngle(leftVector, rightVector);
+  const leftMeta = getExpressionMetadata(left);
+  const rightMeta = getExpressionMetadata(right);
+  const isVector = combinedVector.translateX !== undefined || combinedVector.translateY !== undefined;
+
+  const family: AnimationFamily = isVector ? "vetorial" : "escalar";
+  const subfamily: VectorSubfamily | undefined = isVector
+    ? combinedVector.translateX !== undefined && combinedVector.translateY !== undefined
+      ? "diagonal"
+      : combinedVector.translateX !== undefined
+        ? "horizontal"
+        : "vertical"
+    : undefined;
+
+  const tempName = registerTempInterpolation(
+    combinedVector,
+    leftMeta?.property || rightMeta?.property || property,
+    family,
+    subfamily,
+  );
+
   return {
-    type: "ResultAction",
-    vector: combineVectorsWithAngle(leftVector, rightVector),
+    type: "Action",
+    name: tempName,
+    args: [],
   };
 }
 
@@ -216,6 +298,30 @@ async function executeActionExpr(element: HTMLElement, expr: ActionExpr, propert
       return;
     }
 
+    const temp = getTempInterpolation(expr.name);
+    if (temp) {
+      const cssTransform = vectorToCssTransform(temp.vector);
+      element.style.transition = "none";
+      element.style.transform = cssTransform;
+      void element.offsetWidth;
+      element.style.transition = `transform 600ms ${property ?? "linear"}`;
+      element.style.transform = "none";
+
+      await new Promise<void>(resolve => {
+        const onEnd = () => {
+          element.removeEventListener("transitionend", onEnd);
+          resolve();
+        };
+
+        element.addEventListener("transitionend", onEnd);
+        setTimeout(() => {
+          element.removeEventListener("transitionend", onEnd);
+          resolve();
+        }, 650);
+      });
+      return;
+    }
+
     const animResult = filterAnim(expr.name);
     const animationFn = animResult.fn;
     const argsStr = expr.args.join(",");
@@ -225,29 +331,6 @@ async function executeActionExpr(element: HTMLElement, expr: ActionExpr, propert
     }
 
     await Promise.resolve(animationFn(element, argsStr));
-    return;
-  }
-
-  if (isResultActionNode(expr)) {
-    const cssTransform = vectorToCssTransform(expr.vector);
-    element.style.transition = "none";
-    element.style.transform = cssTransform;
-    void element.offsetWidth;
-    element.style.transition = `transform 600ms ${property ?? "linear"}`;
-    element.style.transform = "none";
-
-    await new Promise<void>(resolve => {
-      const onEnd = () => {
-        element.removeEventListener("transitionend", onEnd);
-        resolve();
-      };
-
-      element.addEventListener("transitionend", onEnd);
-      setTimeout(() => {
-        element.removeEventListener("transitionend", onEnd);
-        resolve();
-      }, 650);
-    });
     return;
   }
 
@@ -270,16 +353,12 @@ async function executeSequenceNode(element: HTMLElement, seq: ActionSequenceNode
   }
 
   let currentExpr = seq.parts[0]!;
+  const tempNames: string[] = [];
 
   for (let idx = 0; idx < seq.operators.length; idx++) {
     const operator = seq.operators[idx];
     const nextExpr = seq.parts[idx + 1]!;
     const delayMs = seq.delays?.[idx] ?? null;
-
-    if (delayMs !== null) {
-      console.log(`[Vectora] Aguardando ${delayMs}ms antes do próximo segmento`);
-      await delay(delayMs);
-    }
 
     const leftMeta = getExpressionMetadata(currentExpr);
     const rightMeta = getExpressionMetadata(nextExpr);
@@ -293,11 +372,24 @@ async function executeSequenceNode(element: HTMLElement, seq: ActionSequenceNode
       await executeActionExpr(element, currentExpr, property);
       currentExpr = nextExpr;
     } else {
-      currentExpr = createResultAction(currentExpr, nextExpr);
+      const resultExpr = createResultAction(currentExpr, nextExpr, property);
+      if (isActionNode(resultExpr) && isTempInterpolationName(resultExpr.name)) {
+        tempNames.push(resultExpr.name);
+      }
+      currentExpr = resultExpr;
+    }
+
+    if (delayMs !== null) {
+      console.log(`[Vectora] Aguardando ${delayMs}ms antes do próximo segmento`);
+      await delay(delayMs);
     }
   }
 
-  await executeActionExpr(element, currentExpr, property);
+  try {
+    await executeActionExpr(element, currentExpr, property);
+  } finally {
+    unregisterTempInterpolations(tempNames);
+  }
 }
 
 async function executeStatementExpression(element: HTMLElement, actionExpr: ActionExpr, easing: string) {
@@ -386,6 +478,9 @@ export function interpret(ast: ProgramNode) {
 
             const validateActionNode = (action: ActionNode) => {
               const animName = action.name.startsWith("~") ? action.name.slice(1) : action.name;
+              if (isTempInterpolationName(animName)) {
+                return;
+              }
               if (!isAnimationValidForProperty(animName, property)) {
                 throw new Error(`[Vectora] Erro: A propriedade '${property}' não pode receber a animação '${animName}'. Animações compatíveis com '${property}' devem ser específicas dessa propriedade.`);
               }

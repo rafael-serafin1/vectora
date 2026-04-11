@@ -117,10 +117,7 @@ export const textAnimations = {
 
       ensureInlineBlockIfNeeded(el);
 
-      const startTransform =
-        direction === 'right'
-          ? `translateX(${distance})`
-          : `translateX(-${distance})`;
+      const startTransform = direction === 'right' ? `translateX(${distance})` : `translateX(-${distance})`;
 
       el.style.opacity = '0';
       el.style.transform = startTransform;
@@ -139,9 +136,7 @@ export const textAnimations = {
       };
 
       const onEnd = (e: TransitionEvent) => {
-        if (e.propertyName === 'opacity') {
-          finish();
-        }
+        if (e.propertyName === 'opacity') finish();
       };
 
       el.addEventListener('transitionend', onEnd);
@@ -166,9 +161,7 @@ export const textAnimations = {
 
       ensureInlineBlockIfNeeded(el);
 
-      let endTransform = direction === 'left'
-        ? `translateX(${distance})`
-        : `translateX(-${distance})`;
+      let endTransform = direction === 'left' ? `translateX(${distance})` : `translateX(-${distance})`;
 
       appendTransition(el, `transform ${duration}ms ease, opacity ${duration}ms ease`);
 

@@ -1,24 +1,18 @@
+// Leia DEEPKNOWLAGE.md para melhor detalhamento
 main > div > h1 {
     DOMContent.onLoad {
-        // erro que fazia o delay depois do sinal "=>" não funcionar resolvido!
-        // proxima etapa -> operador de aplicação de propriedades "&"
-        //text: rise() +- slideOut() => --1000ms => &ease-in-out;
-        // aplicar propriedades a interpolações de concatenação não faz muita diferença
-        // agora aceita funções como steps() e cubix()
-        text: (rise() ++ slideIn()) ++ rise() => &ease-in-out;
+        // não houve diferença entre as duas formas
+        // a interpolação deveria levar em conta a precedência, mas o resultado foi o mesmo
+        // a animação não teve o resultado esperado, a soma levou em conta apenas os pixeis, resultado (-60px, 30px)
+        // e o angulo se manteve em 45° graus, o que não é o resultado esperado descrito
+        text: (rise() ++ slideIn()) => &ease-in-out => slideOut() --1s;
         color: fadeColor(#f00, #000, 600ms);
     };
 }
 
-// ainda não há a opção de colocar o infixo ">" para selecionar apenas as childs dentro de um seletor
-// também não há como utilizar a expressão "," para adicionar mais de um seletor
-// é necessário suas atribuições ao código
 .parent {
     DOMContent.onLoad {
         text: rise() ++ rise() => &ease-in-out;
-        // aqui a soma leva em conta apenas os pixeis, resultado (-60px, 30px)
-        // ao colocar a precedência, a soma leva em conta apenas o ângulo (22.5° graus)
-        // text: (rise() ++ slideIn()) ++ slideIn() => &ease-in-out;
     };
 }
 
