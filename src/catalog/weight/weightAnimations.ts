@@ -10,6 +10,7 @@ export const weightAnimations = {
         void el.offsetWidth; 
 
         appendTransition(el, `font-weight ${duration}ms ease`);
+        el.style.fontWeight = `normal`; // Garantir que parta de um peso normal para o efeito ser mais perceptível
         
         requestAnimationFrame(() => {
             el.style.fontWeight = `${intensity / 10}`;
@@ -25,6 +26,7 @@ export const weightAnimations = {
         void el.offsetWidth; 
 
         appendTransition(el, `font-weight ${duration}ms ease`);
+        el.style.fontWeight = `normal`;
 
         requestAnimationFrame(() => {
             el.style.fontWeight = `${intensity * 2}`;

@@ -41,12 +41,11 @@ export function reverseAnimation(anim: string): Function {
     if (anim == 'chameleonCamo') return octopus;
     if (anim == 'zoomOut') return zoomIn;
     if (anim == 'zoomIn') return zoomOut;
-    else console.error(`[Vectora] Inverso de animação não foi catalogado ---> ${anim}`);
-    // else return handleUncataloged(anim);
 
-    // return básico só de sacanagem
-    return () => { };
+    console.warn(`[Vectora] Inverso de animação não foi catalogado ---> ${anim}, usando fallback genérico.`);
+    return handleUncataloged(`~${anim}`);
 }
+
 
 const reverseCatalog = {
     fall: (el: HTMLElement, args: any) => {

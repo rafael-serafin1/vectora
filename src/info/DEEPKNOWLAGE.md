@@ -83,7 +83,7 @@
 
     - stagedBloom(sentido (vertical/horizontal), duração) ---> transita do gap inicial para o final com preferência referenciada.
 
-- [ ] weight ==
+- [x] weight ==
     - skinny(escala, duração) ---> multiplica o peso da fonte pela escala em porcentagem.
     
     - heavy(escala, duração) ---> divide o peso da fonte pela escala em porcentagem.
@@ -95,7 +95,7 @@
 
     - stop(sem parâmetro) ---> para de tocar o som.
 
-- [ ] brightness ==
+- [x] brightness ==
     - halo(intensidade, cor, duração) ---> cria uma luz envolta do texto.
 
     - fadeLight(intensidade original, duração) ---> desfaz uma luz envolta do texto.
