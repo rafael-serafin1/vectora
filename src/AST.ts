@@ -149,18 +149,29 @@ export function parser(tokens: Token[]): ProgramNode {
     let typeNew: string = "";
     const arrowDelays: (number | null)[] = [];
 
+    const parseDelayToken = (delayToken: string) => {
+      const match = delayToken.match(/^(\d+(?:\.\d+)?)(ms|s)$/);
+      if (match && match[1]) {
+        const value = parseFloat(match[1]);
+        return match[2] === "s" ? value * 1000 : value;
+      }
+      return null;
+    };
+
+    // Captura delay solto após a ação principal, quando não há '=>'
+    if (current() && current()!.type === "DELAY") {
+      const delayToken = consume("DELAY", "Esperado delay").value!;
+      finalDelay = parseDelayToken(delayToken);
+      arrowDelays.push(finalDelay);
+    }
+
     // Verifica se há múltiplos "=>" (manipulação de interpolação)
     while (current() && current()!.type === "ARROW") {
       consume("ARROW", "Esperado '=>'");
 
       if (current() && current()!.type === "DELAY") {
         const delayToken = consume("DELAY", "Esperado delay").value!;
-        const match = delayToken.match(/^(\d+(?:\.\d+)?)(ms|s)$/);
-        if (match && match[1]) {
-          let value = parseFloat(match[1]);
-          const unit = match[2] || "ms";
-          finalDelay = unit === "s" ? value * 1000 : value;
-        }
+        finalDelay = parseDelayToken(delayToken);
         arrowDelays.push(finalDelay);
       }
 

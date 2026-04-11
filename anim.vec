@@ -1,5 +1,6 @@
 // Leia DEEPKNOWLAGE.md para melhor detalhamento
-main > div > h1 {
+main > div > h1,
+main > div > h2 {
     DOMContent.onLoad {
         // não houve diferença entre as duas formas
         // a interpolação deveria levar em conta a precedência, mas o resultado foi o mesmo
@@ -7,6 +8,9 @@ main > div > h1 {
         // e o angulo se manteve em 45° graus, o que não é o resultado esperado descrito
         text: (rise() ++ slideIn()) => &ease-in-out => slideOut() --1s;
         color: fadeColor(#f00, #000, 600ms);
+    };
+    onSing.click {
+        text: fadeIn(600ms);
     };
 }
 
@@ -18,7 +22,8 @@ main > div > h1 {
 
 #child {
     DOMContent.onLoad {
-        radius: round();
-        shadow: surge() +- purge() => --700ms;
+        radius: round(15, 550ms);
+        //shadow: surge() +- purge() => --700ms;
+        brightness: halo(4, #b8c9d4, 600ms) --1250ms;
     };
 }
