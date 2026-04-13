@@ -36,7 +36,8 @@ function createReverseAnimation(animationName: string, property: string, args: s
 
   switch (property) {
     case "color":
-      // Para color, inverter initial e final color
+    case "background.color":
+      // Para color e background.color, inverter initial e final color
       if (animationName === "fadeColor") {
         const parts = args ? args.split(',').map(p => p.trim()) : [];
         const initialColor = parts[0] || '#000000';
@@ -244,7 +245,11 @@ export function handleUncataloged(anim: string): Function {
         }, duration + 100);
       });
     };
-  } else 
+  } else {
     // Para não vetoriais, usar lógica específica por propriedade
-    return createReverseAnimation(animationName, metadata.property, arg);
+    const metadataProperty = Array.isArray(metadata.property)
+      ? metadata.property[0] ?? "color"
+      : metadata.property;
+    return createReverseAnimation(animationName, metadataProperty, arg);
+  }
 }

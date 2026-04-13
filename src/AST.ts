@@ -151,7 +151,7 @@ export function parser(tokens: Token[]): ProgramNode {
       }
     } else 
         while (current() && current()!.type !== "RBRACE") statements.push(parseStatement());
-        
+
     consume("RBRACE", "Esperado '}' no fim do trigger");
     consume("SEMICOLON", "Esperado ';' após bloco do trigger");
 
@@ -210,8 +210,7 @@ export function parser(tokens: Token[]): ProgramNode {
       }
       if (current() && current()!.type === "PROPERTY") {
         propertyNew = consume("PROPERTY", "Esperado propriedade").value!;
-      }
-      else if (current() && current()!.type !== "SEMICOLON" && current()!.type !== "DELAY" && current()!.type !== "PROPERTY") {
+      } else if (current() && current()!.type !== "SEMICOLON" && current()!.type !== "DELAY" && current()!.type !== "PROPERTY") {
         finalActions.push(parseAction());
 
         if (current() && current()!.type === "DELAY") {
@@ -224,6 +223,13 @@ export function parser(tokens: Token[]): ProgramNode {
           }
           arrowDelays.push(finalDelay);
         }
+      }
+
+      // Captura delay após propriedade ou tipo de propriedade no contexto de '=>'
+      if (current() && current()!.type === "DELAY") {
+        const delayToken = consume("DELAY", "Esperado delay").value!;
+        finalDelay = parseDelayToken(delayToken);
+        arrowDelays.push(finalDelay);
       }
     }
 

@@ -17,6 +17,9 @@
 - [x] when.CheckBox ==
     Ao ser checado, uma animação ocorre com um elemento input do tipo checkbox.
 
+- [x] when.UncheckBox ==
+    Ao desmarcar uma checkbox, ativa animações.
+
 - [x] when.Checked ==
     Um link ja checado uma vez, realizará uma animação.
 

@@ -27,7 +27,7 @@ export interface AnimationMetadata {
   subfamily?: VectorSubfamily; // apenas para animações vetoriais
   singularity: AnimationSingularity; // entrada, saída ou indefinida
   vector: TransformVector; // efeito de transformação
-  property: AnimationProperty; // qual propriedade pode usar esta animação
+  property: AnimationProperty | AnimationProperty[]; // qual propriedade pode usar esta animação
 }
 
 /// 
@@ -125,13 +125,13 @@ export const animationMetadata: Record<string, AnimationMetadata> = {
     family: "adimensional",
     singularity: "indefinida",
     vector: {},
-    property: "color"
+    property: ["color", "background.color"]
   },
   chameleonCamo: { 
     family: "adimensional",
     singularity: "indefinida",
     vector: {},
-    property: "color"
+    property: ["color", "background.color"]
   },
   octopusCamo: { 
     family: "adimensional",
@@ -143,7 +143,7 @@ export const animationMetadata: Record<string, AnimationMetadata> = {
     family: "adimensional",
     singularity: "indefinida",
     vector: {},
-    property: "color"
+    property: ["color", "background.color"]
   },
   liquidFill: { 
     family: "adimensional",
@@ -310,12 +310,19 @@ export function getAnimationMetadata(animName: string): AnimationMetadata | null
 
 /// Valida se uma animação é compatível com a propriedade CSS indicada
 /// Retorna true se a animação pode ser usada com a propriedade, false caso contrário
+function isPropertyAllowed(metadataProperty: AnimationProperty | AnimationProperty[], property: string): boolean {
+  if (Array.isArray(metadataProperty)) {
+    return metadataProperty.includes(property as AnimationProperty);
+  }
+  return metadataProperty === property;
+}
+
 export function isAnimationValidForProperty(animName: string, property: string): boolean {
   const metadata = getAnimationMetadata(animName);
   if (!metadata) {
     return false; // Animação desconhecida
   }
-  return metadata.property === property;
+  return isPropertyAllowed(metadata.property, property);
 }
 
 

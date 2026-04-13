@@ -270,9 +270,14 @@ function createResultAction(left: ActionExpr, right: ActionExpr, property: strin
         : "vertical"
     : undefined;
 
+  const tempProperty = property ??
+    (typeof leftMeta?.property === "string" ? leftMeta.property : leftMeta?.property?.[0]) ??
+    (typeof rightMeta?.property === "string" ? rightMeta.property : rightMeta?.property?.[0]) ??
+    "text";
+
   const tempName = registerTempInterpolation(
     combinedVector,
-    leftMeta?.property || rightMeta?.property || property,
+    tempProperty,
     family,
     subfamily,
   );
@@ -327,7 +332,7 @@ async function executeActionExpr(element: HTMLElement, expr: ActionExpr, propert
       return;
     }
 
-    const animResult = filterAnim(expr.name);
+    const animResult = filterAnim(expr.name, property);
     const animationFn = animResult.fn;
     const argsStr = expr.args.join(",");
 
