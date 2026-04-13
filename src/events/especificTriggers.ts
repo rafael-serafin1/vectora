@@ -123,6 +123,21 @@ export const especificTriggers: Record<string, TriggerFn> = {
     });
   },
 
+  "when.UncheckBox": (cb, elements) => {
+    assertLibraryLoaded("whensevent");
+
+    document.addEventListener("change", (event) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      for (const element of elements) {
+        if (matchesElement(target, element) && (target as HTMLInputElement).type === "checkbox" && !(target as HTMLInputElement).checked) {
+          cb([element]);
+          break;
+        }
+      }
+    });
+  },
+
   "when.Focused": (cb, elements) => {
     assertLibraryLoaded("whensevent");
 

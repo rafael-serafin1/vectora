@@ -15,8 +15,10 @@ export interface AnimationResult {
 }
 
 // Retorna o objeto de animações que contém `animName`.
-// Ordem de checagem: color -> text -> fallback (text)
-function filterAnimObject(animName: string) {
+// Ordem de checagem: text -> color -> transform -> gap -> radius -> brightness -> shadow -> backgroundColor -> sound
+function filterAnimObject(animName: string, property?: string) {
+  if (property === "background.color" && animName in backgroundColor) return backgroundColor as any;
+  if (property === "color" && animName in colorAnimations) return colorAnimations as any;
   if (animName in textAnimations) return textAnimations as any;
   if (animName in colorAnimations) return colorAnimations as any;
   if (animName in transformAnimations) return transformAnimations as any;
@@ -34,8 +36,8 @@ function filterAnimObject(animName: string) {
  * @param animName Nome da animação
  * @returns Objeto com função de animação e metadados
  */
-export function filterAnim(animName: string): AnimationResult {
-  const animObject = filterAnimObject(animName);
+export function filterAnim(animName: string, property?: string): AnimationResult {
+  const animObject = filterAnimObject(animName, property);
   const animFn = animObject[animName];
   const metadata = getAnimationMetadata(animName);
   

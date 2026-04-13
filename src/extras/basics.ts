@@ -74,3 +74,15 @@ export function appendTransition(el: HTMLElement, transition: string): boolean {
 
   return true;
 }
+
+/**
+ *
+ * @param string Token string
+ * @param substrings String array to check if any is included in the string
+ * @returns boolean value indicating if any of the substrings is included in the string
+ */
+export function findIncludes(string: string, substrings: string[]): boolean {
+  for (const sub of substrings) 
+    if (string.includes(sub)) return true;
+  return false;  
+}

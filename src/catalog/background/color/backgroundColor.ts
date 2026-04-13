@@ -11,7 +11,7 @@ export const backgroundColor = {
 
     void el.offsetWidth;
 
-    appendTransition(el, `color ${duration}ms ease-in-out`);
+    appendTransition(el, `background-color ${duration}ms ease-in-out`);
 
     requestAnimationFrame(() => {
       el.style.backgroundColor = finalColor;

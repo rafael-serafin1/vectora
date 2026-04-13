@@ -1,4 +1,4 @@
-// Leia DEEPKNOWLAGE.md para melhor detalhamento
+﻿// Vectora demo: animações únicas para cada bloco do site
 @vectora {
     import {
         whensevent,
@@ -6,28 +6,127 @@
     };
 }
 
-main > div > h1,
-main > div > h2 {
+main .hero-headline {
     DOMContent.onLoad {
-        // não houve diferença entre as duas formas
-        // a interpolação deveria levar em conta a precedência, mas o resultado foi o mesmo
-        // a animação não teve o resultado esperado, a soma levou em conta apenas os pixeis, resultado (-60px, 30px)
-        // e o angulo se manteve em 45° graus, o que não é o resultado esperado descrito
-        text: (rise() ++ slideIn()) => &ease-in-out => slideOut() --1s;
-        color: fadeColor(#f00, #000, 600ms);
+        text: rise() => &ease-out --850ms;
+        color: chameleonCamo(#f8fafc, #7dd3fc, 900ms);
     };
 }
 
-.parent {
-    DOMContent.onLoad {
-        text: rise() ++ rise() => &ease-in-out;
+main .hero-subtitle {
+    window.onLoad {
+        text: slideIn("right", 34px, 900ms) => &ease-out --650ms;
+        brightness: neon(#7c3aed, all, 14);
     };
 }
 
-#child {
+.hero-button {
+    when.Hover {
+        transform: zoomIn(1.08, 260ms);
+        shadow: surge("bottom-right", 20, 260ms);
+    };
+
+    onSing.click {
+            background.color: fadeColor(#7c3aed, #38bdf8, 320ms);
+            shadow: surge("top-left", 20, 320ms);
+    };
+}
+
+.hero-panel__card {
+    when.Target {
+        transform: zoomIn(1.05, 320ms);
+        background.color: fadeColor(#111827, #2563eb, 520ms);
+        shadow: surge("bottom-left", 22, 380ms);
+    };
+
     DOMContent.onLoad {
-        radius: round(15, 550ms);
-        //shadow: surge() +- purge() => --700ms;
-        brightness: halo(4, #b8c9d4, 600ms) --1250ms;
+        radius: round(28, 720ms);
+        shadow: surge("bottom-right", 18, 780ms);
+    };
+}
+
+#interactive, .interactive-grid {
+    reveal.onScroll {
+        gap: bloom(24, 520ms);
+    };
+}
+
+.focus-card input {
+    when.Focused {
+        transform: zoomIn(1.03, 240ms);
+        brightness: halo(3, #60a5fa, 680ms);
+    };
+}
+
+.checkbox-card {
+    when.CheckBox {
+        background.color: fadeColor( #111827, #2563eb, 520ms);
+        radius: corner("top-left", 28, 620ms);
+    };
+    when.UncheckBox {
+        background.color: fadeColor(#2563eb, #111827, 520ms);
+        radius: corner("top-left", 28, 620ms);
+    };
+
+    when.Checked {
+        shadow: surge("top-left", 26, 320ms);
+        color: paint("left", #f8fafc, 450ms);
+    };
+}
+
+.select-card p {
+    onSelect.click {
+        text: shake("sideways", 10px, 520ms);
+        color: paint("left", #ffffff, 600ms);
+    };
+}
+
+.hold-card .hold-button {
+    onHold.click {
+        transform: zoomIn(1.1, 260ms);
+        shadow: surge("top-right", 24, 320ms);
+    };
+}
+
+.sound-card .sound-button {
+    onDbl.click {
+        sound: play('https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg', 0.3);
+        text: pop(1.12, 320ms);
+    };
+}
+
+#target-box {
+    when.Target {
+        background.color: fadeColor(#111827, #1d4ed8, 680ms);
+        shadow: surge("top-left", 20, 520ms);
+        radius: round(36, 620ms);
+    };
+}
+
+.feature-card {
+    reveal.onScroll {
+        transform: rotate("clockwise", 8, 700ms);
+        shadow: surge("bottom-left", 16, 700ms);
+    };
+}
+
+.feature-card.feature-card--one {
+    DOMContent.onLoad {
+        text: pop(1.12, 560ms);
+    };
+}
+
+.feature-card.feature-card--two {
+    reveal.onScroll {
+        background.color: fadeColor(#111827, #3b82f6, 760ms);
+        radius: round(30, 660ms);
+    };
+}
+
+.feature-card.feature-card--three {
+    hide.onScroll {
+        radius: corner("bottom-right", 30, 620ms);
+        transform: zoomOut(0.96, 640ms);
+        shadow: purge(520ms);
     };
 }

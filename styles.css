@@ -4,6 +4,317 @@
     box-sizing: border-box;
 }
 
-main {
+:root {
+    color-scheme: dark;
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: radial-gradient(circle at top left, rgba(96, 165, 250, 0.2), transparent 30%),
+                radial-gradient(circle at bottom right, rgba(236, 72, 153, 0.22), transparent 22%),
+                #020617;
+    color: #e2e8f0;
+}
+
+body {
+    min-height: 100vh;
+    background-attachment: fixed;
+}
+
+body, button, a, p, h1, h2, h3, span {
+    line-height: 1.4;
+}
+
+button, input {
+    font: inherit;
+}
+
+.site-shell {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 48px 24px 64px;
+}
+
+.hero {
+    display: grid;
+    gap: 32px;
+    align-items: center;
+    grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+    padding: 40px 32px;
+    margin-bottom: 52px;
+    background: rgba(15, 23, 42, 0.72);
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    border-radius: 36px;
+    backdrop-filter: blur(18px);
+}
+
+.hero-copy {
+    max-width: 620px;
+}
+
+.eyebrow {
+    display: inline-flex;
+    padding: 10px 16px;
+    margin-bottom: 24px;
+    border-radius: 999px;
+    background: rgba(56, 189, 248, 0.15);
+    color: #7dd3fc;
+    font-size: 0.85rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.hero-headline {
+    font-size: clamp(3rem, 4.5vw, 4.8rem);
+    max-width: 11ch;
+    margin-bottom: 24px;
+    font-weight: 800;
+    letter-spacing: -0.05em;
+    color: white;
+}
+
+.hero-subtitle {
+    max-width: 44rem;
+    font-size: 1.08rem;
+    color: #cbd5e1;
+    margin-bottom: 32px;
+}
+
+.hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.hero-link,
+.hero-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 16px 28px;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 700;
+    transition: transform 220ms ease, box-shadow 220ms ease, opacity 220ms ease, background 220ms ease;
+}
+
+.hero-button {
+    background: linear-gradient(135deg, #7c3aed, #38bdf8);
+    color: #f8fafc;
+    box-shadow: 0 24px 70px rgba(56, 189, 248, 0.16);
+}
+
+.hero-link {
+    background: rgba(255, 255, 255, 0.08);
+    color: #cbd5e1;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.hero-button:hover,
+.hero-link:hover {
+    transform: translateY(-2px) scale(1.01);
+}
+
+.hero-panel {
+    padding: 26px;
+    border-radius: 36px;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.82));
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    box-shadow: 0 40px 130px rgba(15, 23, 42, 0.24);
+}
+
+.hero-panel__card {
+    display: grid;
+    gap: 20px;
+    padding: 32px;
+    border-radius: 32px;
+    background: rgba(30, 41, 59, 0.95);
+    border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.hero-panel__label {
+    display: inline-flex;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: rgba(59, 130, 246, 0.18);
+    color: #bfdbfe;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.hero-panel__card h2 {
+    font-size: clamp(1.85rem, 2.5vw, 2.6rem);
+    line-height: 1.05;
+    color: #f8fafc;
+}
+
+.hero-panel__card p {
+    color: #cbd5e1;
+    font-size: 1rem;
+}
+
+.section-header {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.section-header h2 {
+    font-size: clamp(2rem, 3vw, 2.8rem);
+    color: #f8fafc;
+}
+
+.section-header p {
+    color: #94a3b8;
+    max-width: 720px;
+}
+
+.interactive {
+    padding: 24px 0 16px;
+}
+
+.interactive-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+}
+
+.interactive-card {
+    display: grid;
+    gap: 18px;
+    min-height: 220px;
+    padding: 28px;
+    border-radius: 28px;
+    background: rgba(15, 23, 42, 0.84);
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    backdrop-filter: blur(14px);
+}
+
+.interactive-card h3 {
+    margin-bottom: 6px;
+    color: #f8fafc;
+    font-size: 1.3rem;
+}
+
+.interactive-card p,
+.interactive-card label {
+    color: #cbd5e1;
+    font-size: 0.98rem;
+}
+
+.interactive-card input {
+    width: 100%;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 16px;
+    padding: 14px 16px;
+    background: rgba(255, 255, 255, 0.04);
+    color: #f8fafc;
+}
+
+.interactive-card button {
+    width: fit-content;
+    padding: 14px 22px;
+    border-radius: 999px;
+    border: none;
+    background: linear-gradient(135deg, #8b5cf6, #38bdf8);
+    color: #f8fafc;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 220ms ease, box-shadow 220ms ease;
+}
+
+.interactive-card button:hover {
+    transform: translateY(-1px);
+}
+
+.checkbox-label {
+    display: inline-flex;
+    gap: 12px;
+    align-items: center;
+    cursor: pointer;
+}
+
+.checkbox-label input {
+    width: 18px;
+    height: 18px;
+    accent-color: #38bdf8;
+}
+
+#target-box {
+    min-height: 200px;
+}
+
+.features {
+    display: grid;
+    gap: 24px;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    margin-top: 24px;
+}
+
+.feature-card {
+    position: relative;
     padding: 30px;
+    min-height: 240px;
+    border-radius: 32px;
+    background: rgba(15, 23, 42, 0.76);
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    overflow: hidden;
+    backdrop-filter: blur(16px);
+    transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-6px);
+    border-color: rgba(99, 102, 241, 0.35);
+}
+
+.feature-label {
+    display: inline-flex;
+    margin-bottom: 22px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: rgba(99, 102, 241, 0.14);
+    color: #c7d2fe;
+    font-weight: 700;
+    font-size: 0.92rem;
+}
+
+.feature-card h3 {
+    font-size: clamp(1.6rem, 2vw, 2rem);
+    margin-bottom: 16px;
+    color: #f8fafc;
+}
+
+.feature-card p {
+    color: #cbd5e1;
+    font-size: 1rem;
+    max-width: 34rem;
+}
+
+.site-footer {
+    margin-top: 56px;
+    padding-top: 2px;
+    border-top: 1px solid rgba(148, 163, 184, 0.12);
+    color: #94a3b8;
+    text-align: center;
+}
+
+@media (max-width: 840px) {
+    .hero {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .site-shell {
+        padding: 32px 18px 48px;
+    }
+
+    .hero {
+        padding: 28px 20px;
+    }
+
+    .hero-headline {
+        font-size: clamp(2.8rem, 10vw, 3.5rem);
+    }
 }

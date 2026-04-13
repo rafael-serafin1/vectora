@@ -1,25 +1,100 @@
-<!DOCTYPE html>
-<html lang="en">
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="vectora" href="anim.vec">
     <link rel="stylesheet" href="styles.css">
-    <title>Documento</title>
+    <title>Vectora Demo</title>
 </head>
+
 <body>
-    <main>
-        <div>
-            <h1>texto de entrada</h1>
-        </div>
-    
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px;" class="parent">
-            <div style="background-color: black; padding: 30px;" id="child">
-                <h3 style="color: aliceblue;"> Texto de div</h3>
+    <main class="site-shell">
+        <section class="hero">
+            <div class="hero-copy">
+                <span class="eyebrow">DSL de animacoes com Vectora</span>
+                <h1 class="hero-headline">Crie interfaces vibrantes com animacoes declarativas.</h1>
+                <p class="hero-subtitle">
+                    Insira transicoes, eventos e efeitos interativos com Vectora em todas as camadas do seu layout.
+                </p>
+                <div class="hero-actions">
+                    <a class="hero-button" href="#target-box">Ver efeito Target</a>
+                    <a class="hero-link" href="#interactive">Explorar triggers</a>
+                </div>
             </div>
-        </div>
+            <div class="hero-panel">
+                <div class="hero-panel__card">
+                    <span class="hero-panel__label">Demo</span>
+                    <h2>Load + Interacao</h2>
+                    <p>Veja como animacoes de entrada, scroll, clique, foco e selecao trabalham juntas.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="interactive" class="interactive">
+            <header class="section-header">
+                <h2>Triggers interativos</h2>
+                <p>Teste triggers como focus, checkbox, duplo clique, hold, selecao e target hash.</p>
+            </header>
+            <div class="interactive-grid">
+                <article class="interactive-card focus-card">
+                    <h3>Foco</h3>
+                    <p>Toque no campo abaixo para ativar o trigger <strong>when.Focused</strong>.</p>
+                    <input id="focus-input" type="text" placeholder="Clique aqui para focar" />
+                </article>
+                <article class="interactive-card checkbox-card">
+                    <h3>Checkbox</h3>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="feature-checkbox" />
+                        Ative o modo de destaque
+                    </label>
+                </article>
+                <article class="interactive-card select-card">
+                    <h3>Selecao</h3>
+                    <p>Selecione parte deste texto para acionar o trigger <strong>onSelect.click</strong>.</p>
+                </article>
+                <article class="interactive-card target-card" id="target-box">
+                    <h3>Target</h3>
+                    <p>Este bloco responde ao hash <code>#target-box</code> com <strong>when.Target</strong>.</p>
+                </article>
+                <article class="interactive-card hold-card">
+                    <h3>Hold</h3>
+                    <p>Mantenha o botao pressionado por 250ms para acionar <strong>onHold.click</strong>.</p>
+                    <button class="hold-button">Segure aqui</button>
+                </article>
+                <article class="interactive-card sound-card">
+                    <h3>Som</h3>
+                    <p>Use duplo clique para tocar um som com <strong>onDbl.click</strong>.</p>
+                    <button class="sound-button">Tocar som</button>
+                </article>
+            </div>
+        </section>
+
+        <section id="features" class="features">
+            <article class="feature-card feature-card--one">
+                <span class="feature-label">01</span>
+                <h3>Entrada suave</h3>
+                <p>Texto e elementos surgem com movimento organico durante a rolagem ou entrada na pagina.</p>
+            </article>
+            <article class="feature-card feature-card--two">
+                <span class="feature-label">02</span>
+                <h3>Cores em transicao</h3>
+                <p>Variacoes de estilo e cores sao animadas com efeitos de fade e pintura para destacar conteudo.</p>
+            </article>
+            <article class="feature-card feature-card--three">
+                <span class="feature-label">03</span>
+                <h3>Interacoes dinamicas</h3>
+                <p>Hover, clicks e alcance de hash ativam animacoes especificas para cada bloco.</p>
+            </article>
+        </section>
+
+        <footer class="site-footer">
+            <p>Vectora Demo - DSL declarativa para animacoes modernas.</p>
+        </footer>
     </main>
 
     <script type="module" src="dist/runtime.js"></script>
 </body>
+
 </html>

@@ -270,9 +270,14 @@ function createResultAction(left: ActionExpr, right: ActionExpr, property: strin
         : "vertical"
     : undefined;
 
+  const tempProperty = property ??
+    (typeof leftMeta?.property === "string" ? leftMeta.property : leftMeta?.property?.[0]) ??
+    (typeof rightMeta?.property === "string" ? rightMeta.property : rightMeta?.property?.[0]) ??
+    "text";
+
   const tempName = registerTempInterpolation(
     combinedVector,
-    leftMeta?.property || rightMeta?.property || property,
+    tempProperty,
     family,
     subfamily,
   );
@@ -327,7 +332,7 @@ async function executeActionExpr(element: HTMLElement, expr: ActionExpr, propert
       return;
     }
 
-    const animResult = filterAnim(expr.name);
+    const animResult = filterAnim(expr.name, property);
     const animationFn = animResult.fn;
     const argsStr = expr.args.join(",");
 
@@ -465,7 +470,7 @@ export function interpret(ast: ProgramNode) {
         const runElements = targets && targets.length ? targets : Array.from(elements);
 
         // quando o trigger dispara, executa as statements apenas nos elementos alvo
-        for (const element of runElements) {
+        const elementPromises = runElements.map(async (element) => {
           // executar cada statement em paralelo (cada statement pode conter uma sequência interna)
           const statementPromises: Promise<any>[] = [];
 
@@ -506,7 +511,9 @@ export function interpret(ast: ProgramNode) {
 
           // Aguarda todas as statements (cada uma já trata sequências internamente)
           await Promise.all(statementPromises);
-        }
+        });
+
+        await Promise.all(elementPromises);
       };
 
       triggerFn(callback, elements);
