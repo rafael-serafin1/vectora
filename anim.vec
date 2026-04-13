@@ -27,8 +27,8 @@ main .hero-subtitle {
     };
 
     onSing.click {
-            background.color: fadeColor(#7c3aed, #38bdf8, 320ms);
-            shadow: surge("top-left", 20, 320ms);
+        background.color: fadeColor(#7c3aed, #38bdf8, 320ms);
+        shadow: surge("top-left", 20, 320ms);
     };
 }
 
