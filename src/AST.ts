@@ -109,17 +109,21 @@ export function parser(tokens: Token[]): ProgramNode {
   function parseSelector(): string {
     let selector = "";
 
+    const isSelectorOperator = (token: Token) => {
+      return token.type === "OPERATOR" && [">", "+", "~"].includes(token.value ?? "");
+    };
+
     while (current() && current()!.type !== "LBRACE") {
       const token = current()!;
       if (token.type === "COMMA") {
         selector += ",";
         consume("COMMA", "Esperado ',' ou '{' após seletor");
-      } else if (token.type === "IDENT") {
+      } else if (token.type === "IDENT" || isSelectorOperator(token)) {
         if (selector && !selector.endsWith(",") && !selector.endsWith(" ")) {
           selector += " ";
         }
         selector += token.value?.trim() ?? "";
-        consume("IDENT", "Esperado seletor (tag, .class, #id)");
+        consume(token.type, "Esperado seletor (tag, .class, #id ou combinador CSS)");
       } else {
         throw new Error("Esperado seletor antes de '{'");
       }
