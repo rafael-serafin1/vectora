@@ -1,4 +1,5 @@
 import { Token, TokenType, lexer } from "./lexer.js";
+import { findIncludes } from "./extras/basics.js";
 
 // AST raiz
 // nó principal
@@ -139,22 +140,18 @@ export function parser(tokens: Token[]): ProgramNode {
     const imports: string[] = [];
     const triggerName = nameToken.value!.trim();
 
-    if (triggerName === "import") {
+    if (findIncludes(triggerName, ["import", "root", "charset", "stem"])) {
       while (current() && current()!.type !== "RBRACE") {
-        if (current()!.type === "IDENT") {
+        if (current()!.type === "IDENT") 
           imports.push(consume("IDENT", "Esperado nome da biblioteca").value!.trim());
-        } else if (current()!.type === "COMMA") {
+        else if (current()!.type === "COMMA") 
           consume("COMMA", "Esperado ',' entre bibliotecas");
-        } else {
-          throw new Error("Esperado nome da biblioteca ou ',' no import");
-        }
+        else 
+          throw new Error("Esperado nome da biblioteca ou caractere ',' no import");
       }
-    } else {
-      while (current() && current()!.type !== "RBRACE") {
-        statements.push(parseStatement());
-      }
-    }
-
+    } else 
+        while (current() && current()!.type !== "RBRACE") statements.push(parseStatement());
+        
     consume("RBRACE", "Esperado '}' no fim do trigger");
     consume("SEMICOLON", "Esperado ';' após bloco do trigger");
 

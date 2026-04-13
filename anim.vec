@@ -6,6 +6,7 @@
     };
 }
 
+/// A animação executa primeiro em h1 e depois em h2, isso não é esperado de acontecer, pois a animação deveria ser aplicada a ambos os elementos ao mesmo tempo e não em sequência
 main > div > h1,
 main > div > h2 {
     DOMContent.onLoad {
@@ -27,7 +28,6 @@ main > div > h2 {
 #child {
     DOMContent.onLoad {
         radius: round(15, 550ms);
-        //shadow: surge() +- purge() => --700ms;
-        brightness: halo(4, #b8c9d4, 600ms) --1250ms;
+        shadow: surge() +- purge() => --700ms;
     };
 }
