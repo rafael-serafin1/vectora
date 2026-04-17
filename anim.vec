@@ -116,14 +116,14 @@ main .hero-subtitle {
     };
 }
 
-.feature-card.feature-card--two {
+.feature-card .feature-card--two {
     reveal.onScroll {
         background.color: fadeColor(#111827, #3b82f6, 760ms);
         radius: round(30, 660ms);
     };
 }
 
-.feature-card.feature-card--three {
+.feature-card .feature-card--three {
     hide.onScroll {
         radius: corner("bottom-right", 30, 620ms);
         transform: zoomOut(0.96, 640ms);
