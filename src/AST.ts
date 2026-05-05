@@ -37,6 +37,7 @@ type ActionNode = {
   args: (string | number)[];
   counterType?: "equal" | "modulo" | undefined;
   counterValue?: number | undefined;
+  identifier?: string | undefined;
 };
 
 // nó de grupo de expressões entre parênteses
@@ -435,6 +436,12 @@ export function parser(tokens: Token[]): ProgramNode {
       }
     }
 
+    // Verifica se há identificador *
+    let identifier: string | undefined;
+    if (current() && current()!.type === "IDENTIFIER") {
+      identifier = consume("IDENTIFIER", "Esperado identificador").value!;
+    }
+
     const result: ActionNode = {
       type: "Action",
       name: actionName,
@@ -444,6 +451,10 @@ export function parser(tokens: Token[]): ProgramNode {
     if (counterType !== undefined) {
       result.counterType = counterType;
       result.counterValue = counterValue;
+    }
+
+    if (identifier !== undefined) {
+      result.identifier = identifier;
     }
 
     return result;

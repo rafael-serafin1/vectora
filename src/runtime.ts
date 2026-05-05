@@ -24,7 +24,7 @@ async function loadVectoraFiles() {
       const ast = parser(tokens);
       console.log("[Vectora] AST gerada:", ast);
       
-      interpret(ast);
+      await interpret(ast);
       console.info("[Vectora] Terminado a execução do arquivo.");
     } catch (error) {
       console.error("[Vectora] Erro no pipeline Vectora:", error);

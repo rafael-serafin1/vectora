@@ -15,7 +15,8 @@ export type TokenType =
   | "ARROW"
   | "DELAY"
   | "PROPERTY"
-  | "PROPERTY-TYPE";
+  | "PROPERTY-TYPE"
+  | "IDENTIFIER";
 
 
 // Estrutura básica de um token
@@ -233,6 +234,16 @@ export function lexer(input: string): Token[] {
       continue;
     }
 
+    // identificador com símbolo '*'
+    if (char === "*") {
+      const idMatch = input.slice(i).match(/^\*([a-zA-Z_][a-zA-Z0-9_-]*)/);
+      if (idMatch && idMatch[1]) {
+        tokens.push({ type: "IDENTIFIER", value: idMatch[1] });
+        i += idMatch[0].length;
+        continue;
+      }
+      throw new Error("Identificador inválido após '*'");
+    }
 
     if (char && /\d/.test(char)) {
       let value = "";

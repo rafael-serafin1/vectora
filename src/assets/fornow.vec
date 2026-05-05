@@ -7,7 +7,8 @@
 
 h1 {
     when.Hover {                // trigger acessível apenas através da biblioteca whensevent
-        text: land(600ms) %%2;     // contador que basicamente retorna true toda vez que seu valor for igual a 2
-        color: fadeIn() %%x2;      // contador que basicamente retorna true toda vez que seu valor é divisível por 2
+        text: land(600ms) %%2 *h1-land-function;  
+        // "*" representa o identificador da animação, sendo ela o "h1-land-function"     
+        color: fadeIn() %%x2 *h1-fadeIn-function;      
     };
 }

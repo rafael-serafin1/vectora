@@ -327,11 +327,20 @@ Tratadas pelo símbolo '*', os identificadores são cadeias de caracteres que ap
 Identificadores usam strings que estão juntas do símbolo '*'. Se houver um espaço em branco entre o símbolo e a string, o identificador não vai dar certo.
 
 ```
+JEITO CORRETO:
 exemplo {
     window.onLoad {
         text: land() *land-principal-exemplo;
     };
 }
+
+JEITO INCORRETO:
+exemplo {
+    window.onLoad {
+        text: land() * land-principal-exemplo;
+    };
+}
+erro durante runtime...
 ```
 
 ##  Elementos Assíncronos = 
