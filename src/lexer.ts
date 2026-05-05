@@ -226,6 +226,13 @@ export function lexer(input: string): Token[] {
       }
     }
 
+    // operador de contador '%%'
+    if (char === "%" && input[i + 1] === "%") {
+      tokens.push({ type: "OPERATOR", value: "%%" });
+      i += 2;
+      continue;
+    }
+
 
     if (char && /\d/.test(char)) {
       let value = "";

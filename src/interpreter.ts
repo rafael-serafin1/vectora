@@ -33,6 +33,8 @@ type ActionNode = {
   type: "Action";
   name: string;
   args: (string | number)[];
+  counterType?: "equal" | "modulo" | undefined;
+  counterValue?: number | undefined;
 };
 
 type ActionGroupNode = {
@@ -72,6 +74,28 @@ const tempInterpolationRegistry = new Map<string, {
   subfamily: VectorSubfamily | undefined;
 }>();
 let tempInterpolationCounter = 0;
+
+// Função para gerenciar contadores persistentes
+function getCounterValue(key: string): number {
+  const stored = localStorage.getItem(`vectora_counter_${key}`);
+  return stored ? parseInt(stored, 10) : 0;
+}
+
+function incrementCounter(key: string): number {
+  const current = getCounterValue(key);
+  const newValue = current + 1;
+  localStorage.setItem(`vectora_counter_${key}`, newValue.toString());
+  return newValue;
+}
+
+function checkCounterCondition(counterType: "equal" | "modulo", counterValue: number, currentCount: number): boolean {
+  if (counterType === "equal") {
+    return currentCount === counterValue;
+  } else if (counterType === "modulo") {
+    return currentCount % counterValue === 0;
+  }
+  return false;
+}
 
 function registerTempInterpolation(vector: TransformVector, property: string, family: AnimationFamily, subfamily?: VectorSubfamily): string {
   const name = `${tempInterpolationPrefix}${tempInterpolationCounter++}`;
@@ -296,6 +320,18 @@ function delay(ms: number | null): Promise<void> {
 
 async function executeActionExpr(element: HTMLElement, expr: ActionExpr, property: string) {
   if (isActionNode(expr)) {
+    // Lidar com contador
+    if (expr.counterType && expr.counterValue !== undefined) {
+      const counterKey = `${expr.name}_${property}_${element.id || element.className || 'default'}`;
+      const currentCount = incrementCounter(counterKey);
+      const shouldExecute = checkCounterCondition(expr.counterType, expr.counterValue, currentCount);
+      
+      console.log(`[Vectora] Contador para ${counterKey}: ${currentCount} ${expr.counterType === 'equal' ? '===' : '%'} ${expr.counterValue} = ${shouldExecute}`);
+      if (!shouldExecute) {
+        return;
+      }
+    }
+
     if (expr.name.includes("~")) {
       const result = reverseAnimation(expr.name);
       const argsStr = expr.args.join(",");

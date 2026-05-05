@@ -309,21 +309,11 @@ exemplo {
 }
 ```
 
-- Adicionar um 'x' a direita do símbolo fará com que ele retorne true toda vez que o valor contado for par.
-```
-exemplo {
-    window.onLoad {
-        text: land() %%x;               
-        <!-- Retorna true toda vez que o valor contado for par -->
-    };
-}
-```
-
 - Adicionar um valor a direita do 'x' fará com que ele retorne true toda vez que o número da contagem for divisível pelo número.
 ```
 exemplo {
     window.onLoad {
-        text: land() %%x5               
+        text: land() %%x5;               
         <!-- Retorna true toda vez que o valor contado for divisível por 5 -->
     };
 }
