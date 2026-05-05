@@ -35,6 +35,9 @@ type ActionNode = {
   type: "Action";
   name: string;
   args: (string | number)[];
+  counterType?: "equal" | "modulo" | undefined;
+  counterValue?: number | undefined;
+  identifier?: string | undefined;
 };
 
 // nó de grupo de expressões entre parênteses
@@ -411,11 +414,50 @@ export function parser(tokens: Token[]): ProgramNode {
 
     consume("RPAREN", "Esperado ')' após argumentos");
 
-    return {
+    // Verifica se há contador %%
+    let counterType: "equal" | "modulo" | undefined;
+    let counterValue: number | undefined;
+    if (current() && current()!.type === "OPERATOR" && current()!.value === "%%") {
+      consume("OPERATOR", "Esperado '%%'");
+      
+      if (current() && current()!.type === "NUMBER") {
+        counterValue = Number(consume("NUMBER", "Esperado número após %%").value);
+        counterType = "equal";
+      } else if (current() && current()!.type === "IDENT" && current()!.value?.startsWith("x")) {
+        const xValue = consume("IDENT", "Esperado 'x' seguido de número").value!;
+        const numStr = xValue.slice(1);
+        if (!/^\d+$/.test(numStr)) {
+          throw new Error("Esperado número após 'x'");
+        }
+        counterValue = Number(numStr);
+        counterType = "modulo";
+      } else {
+        throw new Error("Esperado número ou 'x' seguido de número após %%");
+      }
+    }
+
+    // Verifica se há identificador *
+    let identifier: string | undefined;
+    if (current() && current()!.type === "IDENTIFIER") {
+      identifier = consume("IDENTIFIER", "Esperado identificador").value!;
+    }
+
+    const result: ActionNode = {
       type: "Action",
       name: actionName,
       args,
     };
+
+    if (counterType !== undefined) {
+      result.counterType = counterType;
+      result.counterValue = counterValue;
+    }
+
+    if (identifier !== undefined) {
+      result.identifier = identifier;
+    }
+
+    return result;
   }
 
   return parseProgram();

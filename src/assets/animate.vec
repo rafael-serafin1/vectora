@@ -1,9 +1,0 @@
-@cmd:module {
-    ($color)reverseColor {                      // para criar funções, os parênteses ficam antes
-        $new-color = $color + "1c";            // variável new-color
-        >$new-color<;                           // >< retorna valores
-    }
-
-    reverseColor("ff0000");                      // chamando a função
-}
-

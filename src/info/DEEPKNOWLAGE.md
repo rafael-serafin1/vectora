@@ -309,21 +309,11 @@ exemplo {
 }
 ```
 
-- Adicionar um 'x' a direita do símbolo fará com que ele retorne true toda vez que o valor contado for par.
-```
-exemplo {
-    window.onLoad {
-        text: land() %%x;               
-        <!-- Retorna true toda vez que o valor contado for par -->
-    };
-}
-```
-
 - Adicionar um valor a direita do 'x' fará com que ele retorne true toda vez que o número da contagem for divisível pelo número.
 ```
 exemplo {
     window.onLoad {
-        text: land() %%x5               
+        text: land() %%x5;               
         <!-- Retorna true toda vez que o valor contado for divisível por 5 -->
     };
 }
@@ -337,11 +327,20 @@ Tratadas pelo símbolo '*', os identificadores são cadeias de caracteres que ap
 Identificadores usam strings que estão juntas do símbolo '*'. Se houver um espaço em branco entre o símbolo e a string, o identificador não vai dar certo.
 
 ```
+JEITO CORRETO:
 exemplo {
     window.onLoad {
         text: land() *land-principal-exemplo;
     };
 }
+
+JEITO INCORRETO:
+exemplo {
+    window.onLoad {
+        text: land() * land-principal-exemplo;
+    };
+}
+erro durante runtime...
 ```
 
 ##  Elementos Assíncronos = 

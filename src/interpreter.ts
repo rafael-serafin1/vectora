@@ -33,6 +33,9 @@ type ActionNode = {
   type: "Action";
   name: string;
   args: (string | number)[];
+  counterType?: "equal" | "modulo" | undefined;
+  counterValue?: number | undefined;
+  identifier?: string | undefined;
 };
 
 type ActionGroupNode = {
@@ -72,6 +75,61 @@ const tempInterpolationRegistry = new Map<string, {
   subfamily: VectorSubfamily | undefined;
 }>();
 let tempInterpolationCounter = 0;
+
+// Função para gerenciar contadores persistentes
+function getCounterValue(key: string): number {
+  const stored = localStorage.getItem(`vectora_counter_${key}`);
+  return stored ? parseInt(stored, 10) : 0;
+}
+
+function incrementCounter(key: string): number {
+  const current = getCounterValue(key);
+  const newValue = current + 1;
+  localStorage.setItem(`vectora_counter_${key}`, newValue.toString());
+  return newValue;
+}
+
+function checkCounterCondition(counterType: "equal" | "modulo", counterValue: number, currentCount: number): boolean {
+  if (counterType === "equal") {
+    return currentCount === counterValue;
+  } else if (counterType === "modulo") {
+    return currentCount % counterValue === 0;
+  }
+  return false;
+}
+
+// identifiers registries 
+type IdentifierInfo = {
+  animationName: string;
+  property: string;
+  elementSelector: string;
+  executionCount: number;
+  lastExecuted: Date;
+};
+
+const identifierRegistry = new Map<string, IdentifierInfo>();
+
+function registerIdentifier(identifier: string, animationName: string, property: string, elementSelector: string): void {
+  if (!identifierRegistry.has(identifier)) {
+    identifierRegistry.set(identifier, {
+      animationName,
+      property,
+      elementSelector,
+      executionCount: 0,
+      lastExecuted: new Date(),
+    });
+  }
+}
+
+function updateIdentifierExecution(identifier: string): void {
+  const info = identifierRegistry.get(identifier);
+  if (info) {
+    info.executionCount++;
+    info.lastExecuted = new Date();
+    identifierRegistry.set(identifier, info);
+    localStorage.setItem(`vectora_identifier_${identifier}`, JSON.stringify(info));
+  }
+}
 
 function registerTempInterpolation(vector: TransformVector, property: string, family: AnimationFamily, subfamily?: VectorSubfamily): string {
   const name = `${tempInterpolationPrefix}${tempInterpolationCounter++}`;
@@ -294,8 +352,32 @@ function delay(ms: number | null): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function executeActionExpr(element: HTMLElement, expr: ActionExpr, property: string) {
+async function executeActionExpr(element: HTMLElement, expr: ActionExpr, property: string, selector?: string) {
   if (isActionNode(expr)) {
+    // identifier registrie
+    if (expr.identifier) {
+      const elementSelector = selector || element.id || element.className || 'default';
+      registerIdentifier(expr.identifier, expr.name, property, elementSelector);
+    }
+
+    // Lidar com contador
+    if (expr.counterType && expr.counterValue !== undefined) {
+      const counterKey = `${expr.name}_${property}_${element.id || element.className || 'default'}`;
+      const currentCount = incrementCounter(counterKey);
+      const shouldExecute = checkCounterCondition(expr.counterType, expr.counterValue, currentCount);
+      
+      console.log(`[Vectora] Contador para ${counterKey}: ${currentCount} ${expr.counterType === 'equal' ? '===' : '%'} ${expr.counterValue} = ${shouldExecute}`);
+      if (!shouldExecute) {
+        return;
+      }
+    }
+
+    // update registries after successful counter check to avoid registering identifiers when the action is skipped due to counter conditions
+    if (expr.identifier) {
+      updateIdentifierExecution(expr.identifier);
+      console.log(`[Vectora] Identificador registrado: ${expr.identifier}`);
+    }
+
     if (expr.name.includes("~")) {
       const result = reverseAnimation(expr.name);
       const argsStr = expr.args.join(",");
@@ -345,20 +427,20 @@ async function executeActionExpr(element: HTMLElement, expr: ActionExpr, propert
   }
 
   if (isActionGroupNode(expr)) {
-    await executeActionExpr(element, expr.expression, property);
+    await executeActionExpr(element, expr.expression, property, selector);
     return;
   }
 
   if (isActionSequenceNode(expr)) {
-    await executeSequenceNode(element, expr, property);
+    await executeSequenceNode(element, expr, property, selector);
     return;
   }
 }
 
-async function executeSequenceNode(element: HTMLElement, seq: ActionSequenceNode, property: string) {
+async function executeSequenceNode(element: HTMLElement, seq: ActionSequenceNode, property: string, selector?: string) {
   if (seq.parts.length === 0) return;
   if (seq.operators.length === 0) {
-    await executeActionExpr(element, seq.parts[0]!, property);
+    await executeActionExpr(element, seq.parts[0]!, property, selector);
     return;
   }
 
@@ -379,7 +461,7 @@ async function executeSequenceNode(element: HTMLElement, seq: ActionSequenceNode
         : getExpressionOperationType(leftMeta, rightMeta);
 
     if (opType === "concatenacao") {
-      await executeActionExpr(element, currentExpr, property);
+      await executeActionExpr(element, currentExpr, property, selector);
       currentExpr = nextExpr;
     } else {
       const resultExpr = createResultAction(currentExpr, nextExpr, property);
@@ -396,14 +478,14 @@ async function executeSequenceNode(element: HTMLElement, seq: ActionSequenceNode
   }
 
   try {
-    await executeActionExpr(element, currentExpr, property);
+    await executeActionExpr(element, currentExpr, property, selector);
   } finally {
     unregisterTempInterpolations(tempNames);
   }
 }
 
-async function executeStatementExpression(element: HTMLElement, actionExpr: ActionExpr, easing: string) {
-  await executeActionExpr(element, actionExpr, easing);
+async function executeStatementExpression(element: HTMLElement, actionExpr: ActionExpr, easing: string, selector?: string) {
+  await executeActionExpr(element, actionExpr, easing, selector);
 
   if (isActionSequenceNode(actionExpr) && actionExpr.finalDelayMs) {
     console.log(`[Vectora] Aguardando ${actionExpr.finalDelayMs}ms antes das ações finais`);
@@ -428,7 +510,7 @@ async function executeStatementExpression(element: HTMLElement, actionExpr: Acti
 
 /// função principal de interpretação do AST
 /// percorre o AST e registra os triggers, associonando-os aos elementos selecionados e executa as animações
-export function interpret(ast: ProgramNode) {
+export async function interpret(ast: ProgramNode) {
   console.log("[Vectora] Iniciando interpretação de", ast.rules.length, "regra(s)");
   
   // percorre cada regra
@@ -506,7 +588,7 @@ export function interpret(ast: ProgramNode) {
             }
 
             const easing = isActionSequenceNode(actionExpr) ? actionExpr.properties ?? "linear" : "linear";
-            statementPromises.push(executeStatementExpression(element, actionExpr, easing));
+            statementPromises.push(executeStatementExpression(element, actionExpr, easing, rule.selector));
           }
 
           // Aguarda todas as statements (cada uma já trata sequências internamente)

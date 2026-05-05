@@ -9,7 +9,7 @@
 main .hero-headline {
     DOMContent.onLoad {
         text: rise() => &ease-out --850ms;
-        color: chameleonCamo(#f8fafc, #7dd3fc, 900ms);
+        color: chameleonCamo(#f8fafc, #7dd3fc, 900ms) %%x2 *main-heroheadline-color;
     };
 }
 
